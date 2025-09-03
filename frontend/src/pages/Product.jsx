@@ -100,6 +100,14 @@ const Product = () => {
                 </div>
               </>
             )}
+            
+          </div>
+          <button className='bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold px-8 py-3 rounded-xl shadow-md shadow-blue-200 hover:from-blue-600 hover:to-blue-700 active:scale-95 transition-all duration-300 ease-in-out'>ADD TO CART</button>
+          <hr className='mt-10 sm:4 '/>
+          <div className='text-sm text-gray-500 mt-6 mb-12 flex flex-col gap-2'>
+            <p>100% Original product</p>
+            <p>Cash on delivery is available</p>
+            <p>Easy return and exchange policy within 7 days</p>
           </div>
         </div>
       </div>
