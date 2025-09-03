@@ -57,6 +57,7 @@ const Product = () => {
         <div className='flex-1'>
           <h1 className='font-medium text-2xl mt-2'>{productData.name}</h1>
 
+          
           <div className='flex items-center gap-1 mt-2'>
             <img src={assets.star_icon} alt="" className="w-5 h-5" />
             <img src={assets.star_icon} alt="" className="w-5 h-5" />
@@ -110,6 +111,16 @@ const Product = () => {
             <p>Easy return and exchange policy within 7 days</p>
           </div>
         </div>
+      </div>
+      {/* Description & Review section */}
+      <div className='mt-16'>
+        <div className='flex border-b'>
+            <button className='px-6 py-3 text-sm font-semibold text-blue-600 border-b-2 border-blue-600  hover:text-blue-700 transition-colors duration-300'>Description</button>
+            <button className='px-6 py-3 text-sm text-gray-600 hover:text-blue-600 transition-colors duration-300'>Reviews(122)</button>
+          </div>
+          <div className='flex flex-col gap-4 border px-6 py-6 text-sm text-gray-500'>
+            <p>{productData.description}</p>
+          </div>
       </div>
     </div>
   )
