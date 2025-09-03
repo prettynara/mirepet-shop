@@ -57,7 +57,7 @@ const Product = () => {
         <div className='flex-1'>
           <h1 className='font-medium text-2xl mt-2'>{productData.name}</h1>
 
-          
+          {/* 별점 */}
           <div className='flex items-center gap-1 mt-2'>
             <img src={assets.star_icon} alt="" className="w-5 h-5" />
             <img src={assets.star_icon} alt="" className="w-5 h-5" />
@@ -80,7 +80,7 @@ const Product = () => {
               )}
             </p>
           )}
-
+          {/* 설명 */}
           <p className='mt-5 text-gray-500 md:w-4/5'>{productData.description}</p>
 
           {/* 옵션 선택 (weight 등) */}
@@ -101,9 +101,10 @@ const Product = () => {
                 </div>
               </>
             )}
-            
           </div>
+          {/* ADD TO CART */}
           <button className='bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold px-8 py-3 rounded-xl shadow-md shadow-blue-200 hover:from-blue-600 hover:to-blue-700 active:scale-95 transition-all duration-300 ease-in-out'>ADD TO CART</button>
+          
           <hr className='mt-10 sm:4 '/>
           <div className='text-sm text-gray-500 mt-6 mb-12 flex flex-col gap-2'>
             <p>100% Original product</p>
@@ -113,7 +114,7 @@ const Product = () => {
         </div>
       </div>
       {/* Description & Review section */}
-      <div className='mt-16'>
+      <div className='mt-0'>
         <div className='flex border-b'>
             <button className='px-6 py-3 text-sm font-semibold text-blue-600 border-b-2 border-blue-600  hover:text-blue-700 transition-colors duration-300'>Description</button>
             <button className='px-6 py-3 text-sm text-gray-600 hover:text-blue-600 transition-colors duration-300'>Reviews(122)</button>
