@@ -126,7 +126,7 @@ const Product = () => {
       </div>
       {/* display similar product */}
       
-      <SimilarProducts category={productData.category} subCategory={productData.subCategory} />
+      <SimilarProducts category={productData.category} subCategory={productData.subCategory} selectedOption={selectedOption} />
 
     </div>
   )
