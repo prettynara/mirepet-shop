@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useState }from 'react'
 import { ShopContext } from '../context/ShopContext'
 import ProductItem from './ProductItem'
-import Title from './Title'
+import ProductsTitle from './ProductsTitle'
 
 const SimilarProducts = ({category,subCategory, selectedOption}) => {
   
@@ -44,12 +44,15 @@ const SimilarProducts = ({category,subCategory, selectedOption}) => {
     },[products, category, subCategory, selectedOption])
 
     return (
-    <div className='my-24'>
-      <div className='text-center text-3x; py-2'>
-        <Title text1={'SIMILAR'} text2={'PRODUCTS'} />
+    <div className='mt-12 mb-16 px-4 sm:px-10 lg:px-20'>
+      {/* Section Title */}
+      <div className='text-center mb-6'>
+        <ProductsTitle text1={'SIMILAR'} text2={'PRODUCTS'} />
+        <p className="text-gray-500 text-sm mt-0"> You may compare the prices with other products and sellers </p>
       </div>
 
-      <div className='grid gri-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5 gap-y-6'>
+      {/* Product Grid */}
+      <div className='flex flex-wrap justify-center gap-6'>
         {similar.map((item,index)=>(
             <ProductItem key={index}  id={item._id} name={item.name} image={item.image} option={item.matchedOption} showDiscount={false} seller={item.seller} />
         ))}

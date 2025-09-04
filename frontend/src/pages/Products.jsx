@@ -1,27 +1,10 @@
 import React, {useContext, useEffect, useState} from 'react'
 import { ShopContext } from './../context/ShopContext';
 import { assets } from '../assets/assets';
-import Title from '../components/Title';
+import ProductsTitle from '../components/ProductsTitle';
 import ProductItem from '../components/ProductItem';
 
 const Products = () => {
-
-  // Title design 제목 디자인
-const ProductsTitle = ({ text1, text2 }) => {
-  return (
-    <div className="flex items-center gap-4 mb-6">
-      <div className="w-12 h-1 bg-blue-400 rounded-full hidden sm:block"></div>
-      <div className="bg-gradient-to-r from-blue-50 to-white px-8 py-4 rounded-2xl shadow-md">
-        <p className="text-xl sm:text-2xl font-bold tracking-wide text-gray-800">
-          <span className="text-blue-500">{text1}</span>{' '}
-          <span className="text-blue-700">{text2}</span>
-        </p>
-      </div>
-      <div className="w-12 h-1 bg-blue-400 rounded-full hidden sm:block"></div>
-    </div>
-  )
-};
-
 
   const { products, search, showSearch } = useContext(ShopContext);
   const [ showFilter, setShowFilter ] = useState(true);
