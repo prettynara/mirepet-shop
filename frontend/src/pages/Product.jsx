@@ -6,7 +6,7 @@ import SimilarProducts from '../components/SimilarProducts';
 
 const Product = () => {
   const { productId } = useParams();
-  const { products, currency } = useContext(ShopContext);
+  const { products, currency, addToCart } = useContext(ShopContext);
   const [productData, setProductData] = useState(null);
   const [image, setImage] = useState('');
   const [selectedOption, setSelectedOption] = useState(null);
@@ -104,7 +104,7 @@ const Product = () => {
             )}
           </div>
           {/* ADD TO CART */}
-          <button className='bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold px-8 py-3 rounded-xl shadow-md shadow-blue-200 hover:from-blue-600 hover:to-blue-700 active:scale-95 transition-all duration-300 ease-in-out'>ADD TO CART</button>
+          <button onClick={()=>addToCart(productData._id, selectedOption)} className='bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold px-8 py-3 rounded-xl shadow-md shadow-blue-200 hover:from-blue-600 hover:to-blue-700 active:scale-95 transition-all duration-300 ease-in-out'>ADD TO CART</button>
           
           <hr className='mt-10 sm:4 '/>
           <div className='text-sm text-gray-500 mt-6 mb-12 flex flex-col gap-2'>
