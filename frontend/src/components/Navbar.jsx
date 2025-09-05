@@ -8,6 +8,7 @@ const Navbar = () => {
     const [visible, setVisible] = useState(false);
 
     const{setFocusSearch, setShowSearch} = useContext(ShopContext);
+    const{getCartCount} = useContext(ShopContext);
     const navigate = useNavigate();
 
     const handleSearchClick = () => {
@@ -57,7 +58,7 @@ const Navbar = () => {
             {/* Cart */}
             <Link to='/cart' className='relative'>
                 <img src={assets.cart_icon} className='w-8 min-w-5' alt=""/>
-                <p className='absolute -top-2 -right-2 w-5 h-5 flex items-center justify-center bg-blue-600 text-white text-xs rounded-full'>10</p>
+                <p className='absolute -top-2 -right-2 w-5 h-5 flex items-center justify-center bg-blue-600 text-white text-xs rounded-full'>{getCartCount()}</p>
             </Link>
 
             {/* Mobile Menu Button */}
