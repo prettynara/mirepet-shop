@@ -6,9 +6,9 @@ const ProductItem = ({id, image, name, seller, option, showDiscount=true}) => {
 
     const {currency} = useContext(ShopContext);
     const price = option?.price;
-const sale_price = option?.sale_price;
-const special_price = option?.special_price;
-const weight = option?.weight;
+    const sale_price = option?.sale_price;
+    const special_price = option?.special_price;
+    const weight = option?.weight;
 
   return (
     <Link className='text-gray-700 cursor-pointer' to={`/product/${id}`}>
@@ -16,7 +16,7 @@ const weight = option?.weight;
         <img className='w-full h-48 object-cover transition-transform duration-300 ease-in-out hover:scale-105' src={image[0]} alt=""/>
       
       {/*할인 뱃지(이미지 위에)*/}
-      {showDiscount && price > sale_price && (
+      {showDiscount && special_price && sale_price && price > sale_price && (
         <span className="absolute top-2 left-2 bg-red-500 text-white text-xs font-semibold px-2 py-1 rounded-lg shadow">
         {Math.round(((price - sale_price) / price) * 100)}% OFF
        </span>
@@ -31,7 +31,7 @@ const weight = option?.weight;
 
       {/*가격*/}
       <div className='flex items-center gap-2'>
-        {special_price && price > sale_price ? (
+        {special_price && sale_price && price > sale_price ? (
           <>
           <p className='text-sm text-gray-400 line-through'>{currency}{price}</p>
           <p className='text-sm font-bold text-red-600'>{currency}{sale_price}</p>

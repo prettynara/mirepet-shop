@@ -1,5 +1,5 @@
 import React, { useState, useContext } from 'react'
-import { Link, NavLink } from 'react-router-dom'
+import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { assets } from './../assets/assets';
 import { ShopContext } from '../context/ShopContext';
 
@@ -7,7 +7,16 @@ const Navbar = () => {
 
     const [visible, setVisible] = useState(false);
 
-    const{setShowSearch} = useContext(ShopContext)
+    const{setFocusSearch, setShowSearch} = useContext(ShopContext);
+    const navigate = useNavigate();
+
+    const handleSearchClick = () => {
+    // 검색어가 없으면 Products 페이지 이동만
+        navigate('/products');
+        setShowSearch(true);
+        setFocusSearch(true);
+    }
+
 
   return (
     // this is where i put the logo left up and home for right up
@@ -30,7 +39,7 @@ const Navbar = () => {
       
       {/* Search */}
       <div className='flex items-center gap-6'>
-            <img onClick={() => setShowSearch(true)} src={assets.search_icon} className='w-7 cursor-pointer hover:opacity-80' alt=""/>
+            <img onClick={handleSearchClick} src={assets.search_icon} className='w-7 cursor-pointer hover:opacity-80' alt=""/>
             
             {/* Profile */}
             <div className='group relative'>

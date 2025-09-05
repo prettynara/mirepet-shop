@@ -71,7 +71,7 @@ const Product = () => {
           {/* 가격 표시 (옵션 기반) */}
           {selectedOption && (
             <p className="mt-5 text-3xl font-medium">
-              {selectedOption.sale_price && selectedOption.price > selectedOption.sale_price ? (
+              {selectedOption.special_price && selectedOption.sale_price && selectedOption.price > selectedOption.sale_price ? (
                 <>
                   <span className="line-through text-gray-400 mr-2">{currency}{selectedOption.price}</span>
                   <span className="text-red-600 font-bold">{currency}{selectedOption.sale_price}</span>

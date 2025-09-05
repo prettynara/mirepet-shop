@@ -3,6 +3,7 @@ import { ShopContext } from './../context/ShopContext';
 import { assets } from '../assets/assets';
 import ProductsTitle from '../components/ProductsTitle';
 import ProductItem from '../components/ProductItem';
+import SearchBar from '../components/SearchBar';
 
 const Products = () => {
 
@@ -80,7 +81,7 @@ const Products = () => {
 
 
   return (
-    <div className='flex flex-col sm:flex-row gap-6 sm:gap-10 pt-12 border-t'>
+    <div className='flex flex-col sm:flex-row gap-6 sm:gap-10  pt-12 border-t'>
       
       {/* Filter Options */}
       <div className='min-w-60'>
