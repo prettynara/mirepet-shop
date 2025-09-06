@@ -49,6 +49,16 @@ const Cart = () => {
                     <img className='w-16 sm:w-20' src={productData.image[0]} alt="" />
                       <div>
                         <p className='text-xm sm:text-lg font-medium'>{productData.name}</p>
+                        <div className='flex items-center gap-5 mt-2'>
+                          {item.option?.special_price && item.option.sale_price < item.option.price ? (
+                            <>
+                              <p className='text-gray-400 line-through'>{currency}{item.option.price}</p>
+                              <p className='text-red-600 font-semibold'>{currency}{item.option.sale_price}</p>
+                            </>
+                          ) : (
+                            <p className='font-semibold'>{currency}{item.option?.price}</p>
+                          )}
+                        </div>
                       </div>
                   </div>
                 </div>
