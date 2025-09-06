@@ -105,7 +105,7 @@ const Cart = () => {
                     onClick={() => removeItem(item._id, item.option?.weight || item.option?.quantity)}
                     className='ml-2 p-1 hover:bg-gray-200 rounded'
                   >
-                    <img src={assets.cross_icon} alt="삭제" className='w-5 h-5' />
+                    <img src={assets.bin_icon} alt="삭제" className='w-7 h-7' />
                   </button>
                 </div>
               </div>
