@@ -58,6 +58,7 @@ const Cart = () => {
                           ) : (
                             <p className='font-semibold'>{currency}{item.option?.price}</p>
                           )}
+                          <p className='px-2 sm:px-3 sm:py-1 border bg-slate-50'>{item.option?.weight || item.option?.quantity}</p>
                         </div>
                       </div>
                   </div>
