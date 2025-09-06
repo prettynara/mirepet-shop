@@ -65,6 +65,31 @@ const ShopContextProvider = (props) => {
             setCartItems(cartData);
     }
 
+    const getCartAmount =  () => {
+        let totalAmount = 0;
+        
+        for(const itemId in cartItems){
+            let itemInfo = products.find((product)=> product._id === itemId);
+            if (!itemInfo) continue;
+            
+            for(const optionKey in cartItems[itemId]){
+                const quantity = cartItems[itemId][optionKey];
+                if (quantity > 0) {
+                    // 옵션 찾기
+                    const option = itemInfo.options?.find(
+                    o => o.weight === optionKey || o.quantity === optionKey
+                );
+
+                // 옵션 가격: sale_price가 있으면 사용, 없으면 기본 price
+                const price = option?.sale_price && option.sale_price < option.price ? option.sale_price : option?.price || 0;
+
+                totalAmount += price * quantity;
+                }
+            }
+        }
+        return totalAmount;
+    }
+
     const value = {
         products,
         currency,
@@ -72,7 +97,8 @@ const ShopContextProvider = (props) => {
         weight,
         search, setSearch,showSearch,setShowSearch,
         cartItems, addToCart,
-        getCartCount, updateQuantity
+        getCartCount, updateQuantity,
+        getCartAmount
     }
   
     return (
