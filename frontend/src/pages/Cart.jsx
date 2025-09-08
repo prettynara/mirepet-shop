@@ -5,7 +5,7 @@ import { assets } from '../assets/assets';
 import CartTotal from './../components/CartTotal';
 
 const Cart = () => {
-  const { products, currency, cartItems, updateQuantity } = useContext(ShopContext);
+  const { products, currency, cartItems, updateQuantity, navigate } = useContext(ShopContext);
   const [cartData, setCartData] = useState([]);
 
   useEffect(() => {
@@ -86,7 +86,7 @@ const Cart = () => {
         <div className='w-full sm:w-[450px] bg-gray-50 p-6 rounded-xl shadow'>
           <CartTotal />
           <div className='w-full text-end'>
-            <button className='bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold px-8 py-3 rounded-xl shadow-md shadow-blue-200 hover:from-blue-600 hover:to-blue-700 active:scale-95 transition-all duration-300 ease-in-out mt-6'>PROCEED TO CHECKOUT</button>
+            <button onClick ={() => navigate('/place-order')} className='bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold px-8 py-3 rounded-xl shadow-md shadow-blue-200 hover:from-blue-600 hover:to-blue-700 active:scale-95 transition-all duration-300 ease-in-out mt-6'>PROCEED TO CHECKOUT</button>
           
           </div>
         </div>

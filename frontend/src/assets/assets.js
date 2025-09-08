@@ -14,6 +14,7 @@ import star_icon from './star_icon.png';
 import cross_icon from './cross_icon.png';
 import star_dull_icon from './star_dull_icon.png';
 import bin_icon from './bin_icon.png';
+import card_logo from './card_logo.png';
 import hero_img from './hero_img.png';
 import rcdf from './rcdf1.jpg';
 import rcdf2 from './rcdf2.jpeg';
@@ -59,6 +60,7 @@ export const assets = {
     star_icon,
     star_dull_icon,
     bin_icon,
+    card_logo,
     hero_img,
     rcdf2,
     rcdf3,
