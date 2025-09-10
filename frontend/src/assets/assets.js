@@ -16,6 +16,7 @@ import star_dull_icon from './star_dull_icon.png';
 import bin_icon from './bin_icon.png';
 import card_logo from './card_logo.png';
 import about_img from './about_img.jpg';
+import contact_img from './contact_img.jpg';
 import hero_img from './hero_img.png';
 import rcdf from './rcdf1.jpg';
 import rcdf2 from './rcdf2.jpeg';
@@ -63,6 +64,7 @@ export const assets = {
     bin_icon,
     card_logo,
     about_img,
+    contact_img,
     hero_img,
     rcdf2,
     rcdf3,

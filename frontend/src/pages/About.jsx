@@ -2,6 +2,7 @@ import React from 'react'
 import ProductsTitle from './../components/ProductsTitle';
 import { assets } from '../assets/assets'; 
 import NewsletterBox from './../components/NewsletterBox';
+import Title from './../components/Title';
 
 const About = () => {
   return (
@@ -9,11 +10,11 @@ const About = () => {
 
       {/* Title */}
       <div className='text-2xl text-center pt-8 border-t'>
-        <ProductsTitle text1={'ABOUT'} text2={'US'} />
+        <Title text1={'ABOUT'} text2={'US'} />
       </div>
       
       {/* Intro */}
-      <div className='my-10 flex flex-col md:flex-row gap-12'>
+      <div className='my-2 flex flex-col md:flex-row gap-12'>
         <img className='w-full md:max-w-[450px]' src={assets.about_img} alt="" />
         <div className='flex flex-col justify-center gap-6 md:w-2/4 text-gray-600 leading-relaxed'>
         <p>At <span className="font-semibold text-blue-600">Mirepet</span>, we believe that pets are family — and they deserve the very best.
@@ -37,8 +38,8 @@ Our mission is to create a trusted ecosystem where every pet owner can find what
       </div>
 
       {/* Why Choose Us */}
-      <div className='text-4xl py-6'>
-        <ProductsTitle text1={'WHY'} text2={'CHOOSE US'} />
+      <div className='text-center text-xl py-6'>
+        <Title text1={'WHY'} text2={'CHOOSE US'} />
       </div>
 
       <div className='grid grid-cols-1 md:grid-cols-3 gap-6 mb-20'>
