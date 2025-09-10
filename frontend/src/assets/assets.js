@@ -15,6 +15,7 @@ import cross_icon from './cross_icon.png';
 import star_dull_icon from './star_dull_icon.png';
 import bin_icon from './bin_icon.png';
 import card_logo from './card_logo.png';
+import about_img from './about_img.jpg';
 import hero_img from './hero_img.png';
 import rcdf from './rcdf1.jpg';
 import rcdf2 from './rcdf2.jpeg';
@@ -61,6 +62,7 @@ export const assets = {
     star_dull_icon,
     bin_icon,
     card_logo,
+    about_img,
     hero_img,
     rcdf2,
     rcdf3,
@@ -94,7 +96,7 @@ export const products = [
     bestseller: true,
     options: [
     { weight: "2kg", price: 100, sale_price: 75, special_price: true },
-    { weight: "4kg", price: 180, sale_price: 140, special_price: false },
+    { weight: "4kg", price: 180, sale_price: 140, special_price: true },
     { weight: "8kg", price: 350, sale_price: 260, special_price: true }
   ]
 },
