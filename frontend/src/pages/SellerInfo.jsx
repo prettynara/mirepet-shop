@@ -6,6 +6,7 @@ const SellerInfo = () => {
     shopName: '',
     location: '',
     phone: '+216', // 기본값으로 국가번호 넣기
+    images: [], // 로고/사진 업로드
   });
   const [error, setError] = useState('');
   const navigate = useNavigate();
@@ -29,6 +30,11 @@ const SellerInfo = () => {
 
     // 저장 후 MyProducts 페이지로 이동
     navigate('/myproducts');
+  };
+
+  const handleImageChange = (e) => {
+    const files = Array.from(e.target.files).slice(0, 3); // 최대 3장
+    setShopInfo(prev => ({ ...prev, images: files }));
   };
 
   return (
@@ -58,6 +64,24 @@ const SellerInfo = () => {
         onChange={(e) => setShopInfo({ ...shopInfo, phone: e.target.value })}
         className="w-full px-4 py-2 border border-gray-300 rounded-lg"
       />
+
+      {/* 이미지 업로드 */}
+      <label className="w-full flex flex-col items-center p-4 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-400 transition">
+        <span className="text-gray-500">Upload Logo / Photos (max 3)</span>
+        <input type="file" accept="image/*" multiple onChange={handleImageChange} className="hidden" />
+      </label>
+
+      {/* 이미지 미리보기 */}
+      <div className="flex gap-2 mt-2 flex-wrap">
+        {shopInfo.images.map((file, idx) => (
+          <img
+            key={idx}
+            src={URL.createObjectURL(file)}
+            alt="preview"
+            className="w-20 h-20 object-cover rounded"
+          />
+        ))}
+      </div>
 
       {/* 에러 메시지 표시 */}
       {error && <p className="text-red-500 text-sm">{error}</p>}
