@@ -1,12 +1,27 @@
-import React, { useState } from 'react'
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 
 const Login = () => {
 
   const [currentState, setCurrentState] =useState('Sign Up');
+  const [role, setRole] = useState('customer'); // 기본값: customer
+  const navigate = useNavigate();
 
   const onSubmitHandler = async (event) => {
       event.preventDefault();
+
+      if (currentState === 'Sign Up') {
+      // 회원가입 후 role에 따라 추가정보 페이지로 이동
+      if (role === 'customer') {
+        navigate('/customer-info');
+      } else if (role === 'seller') {
+        navigate('/seller-info');
+      }
+    } else {
+      // 로그인 로직 (추후 백엔드 연동)
+      console.log('로그인 처리');
+    }
   }
 
   return (
@@ -23,6 +38,30 @@ const Login = () => {
         <input type="email" className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500' placeholder='Email' required />
         <input type="password" className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500' placeholder='Paswword' required />
         
+        {/* Role 선택 (회원가입일 때만 표시) */}
+        {currentState === 'Sign Up' && (
+          <div className="w-full flex justify-between text-sm text-gray-700">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                value="customer"
+                checked={role === 'customer'}
+                onChange={() => setRole('customer')}
+              />
+              Customer
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                value="seller"
+                checked={role === 'seller'}
+                onChange={() => setRole('seller')}
+              />
+              Petshop Seller
+            </label>
+          </div>
+        )}  
+
         {/* Links */}
         <div className='w-full flex justify-between text-sm text-gray-600 mt-[-4px]'>
           <p className='cursor-pointer hover:text-blue-600'>Forgot your password?</p>

@@ -7,6 +7,8 @@ import Cart from './pages/Cart';
 import Product from './pages/Product';
 import Products from './pages/Products';
 import Login from './pages/Login';
+import CustomerInfo from './pages/CustomerInfo';
+import SellerInfo from './pages/SellerInfo';
 import PlaceOrder from './pages/PlaceOrder';
 import Orders from './pages/Orders';
 import Admin from './pages/Admin';
@@ -20,7 +22,7 @@ import AdminNavbar from './components/AdminNavbar';
 import { useRole } from './context/RoleContext';
 import Footer from './components/Footer';
 import SearchBar from './components/SearchBar';
-import { ToastContainer, toast } from 'react-toastify';
+import { ToastContainer} from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 const App = () => {
@@ -43,6 +45,8 @@ const App = () => {
         <Route path='/contact' element={<Contact />} />
         <Route path='/cart' element={<Cart />} />
         <Route path='/login' element={<Login />} />
+        <Route path="/customer-info" element={<CustomerInfo />} />
+        <Route path="/seller-info" element={<SellerInfo />} />
         <Route path='/place-order' element={<PlaceOrder />} />
         <Route path='/orders' element={<Orders />} />
         <Route path='/admin' element={<Admin />} />
