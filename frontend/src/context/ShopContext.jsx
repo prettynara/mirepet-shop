@@ -13,6 +13,7 @@ const ShopContextProvider = (props) => {
     const [showSearch, setShowSearch] = useState(false);    
     const [cartItems, setCartItems] = useState({});
     const navigate = useNavigate();
+    const [currentSeller, setCurrentSeller] =useState('Animax');
 
     const addToCart = async (itemId, option) => {
 
@@ -100,7 +101,8 @@ const ShopContextProvider = (props) => {
         search, setSearch,showSearch,setShowSearch,
         cartItems, addToCart,
         getCartCount, updateQuantity,
-        getCartAmount, navigate
+        getCartAmount, navigate,
+        currentSeller, setCurrentSeller
     }
   
     return (
