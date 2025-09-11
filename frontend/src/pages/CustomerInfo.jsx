@@ -44,7 +44,7 @@ const CustomerInfo = () => {
       onSubmit={onSubmitHandler}
       className="flex flex-col items-center w-[90%] sm:max-w-md m-auto mt-20 gap-5 text-gray-800 bg-white p-8 rounded-xl shadow-md"
     >
-      <h2 className="text-2xl font-semibold mb-6">Customer Info</h2>
+      <h2 className="text-2xl font-semibold mb-6">Customer's Pet Info</h2>
 
       {pets.map((pet, index) => (
         <div key={index} className="w-full border p-4 rounded-lg mb-4 relative">

@@ -36,7 +36,7 @@ const SellerInfo = () => {
       onSubmit={onSubmitHandler}
       className="flex flex-col items-center w-[90%] sm:max-w-md m-auto mt-20 gap-5 text-gray-800 bg-white p-8 rounded-xl shadow-md"
     >
-      <h2 className="text-2xl font-semibold mb-4">Seller Info</h2>
+      <h2 className="text-2xl font-semibold mb-4">Seller's Petshop Info</h2>
       <input
         type="text"
         placeholder="Shop Name"
