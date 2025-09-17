@@ -7,7 +7,19 @@ import { ShopContext } from '../context/ShopContext';
 const PlaceOrder = () => {
 
   const [method, setMethod] = useState('cod');
-  const {navigate} = useContext(ShopContext);
+  const {navigate, placeOrder, cartItems, getCartAmount} = useContext(ShopContext);
+
+  const handlePlaceOrder = () => {
+    const newOrder = {
+      id: Date.now(), // unique id
+      items: cartItems,
+      amount: getCartAmount(),
+      date: new Date().toLocaleDateString(),
+      status: "pending"
+    };
+    placeOrder(newOrder);
+    navigate('/orders');
+  };
 
   return (
     <div className='flex flex-col sm:flex-row justify-between gap-8 pt-8 sm:pt-14 min-h-[80vh] border-t px-4 sm:px-8 lg:px-20'>
@@ -66,7 +78,7 @@ const PlaceOrder = () => {
               </div>
           </div>
           <div className='w-full text-end mt-8'>
-              <button onClick={()=>navigate('/orders')} className='bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold px-10 py-3 rounded-xl shadow-md shadow-blue-200 hover:from-blue-600 hover:to-blue-700 active:scale-95 transition-all duration-300 ease-in-out'>PLACE ORDER</button>
+              <button onClick={handlePlaceOrder} className='bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold px-10 py-3 rounded-xl shadow-md shadow-blue-200 hover:from-blue-600 hover:to-blue-700 active:scale-95 transition-all duration-300 ease-in-out'>PLACE ORDER</button>
           </div>
         </div>
 

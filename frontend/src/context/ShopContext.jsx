@@ -93,6 +93,20 @@ const ShopContextProvider = (props) => {
         return totalAmount;
     }
 
+    const [ orders, setOrders] = useState([]);
+
+    //주문 추가
+    const placeOrder = (orderData) => {
+        setOrders(prev => [... prev,{...orderData, status: "pending"}]);
+    };
+
+    //주문 상태 업데이트
+    const updateOrderStatus = (orderId, status) => {
+        setOrders(prev =>
+            prev.map(o => o.id === orderId ? {...o, status} : o)
+        );
+    };
+
     const value = {
         products,
         currency,
@@ -102,7 +116,8 @@ const ShopContextProvider = (props) => {
         cartItems, addToCart,
         getCartCount, updateQuantity,
         getCartAmount, navigate,
-        currentSeller, setCurrentSeller
+        currentSeller, setCurrentSeller,
+        orders, setOrders, placeOrder, updateOrderStatus
     }
   
     return (
