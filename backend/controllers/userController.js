@@ -4,8 +4,8 @@ import jwt from 'jsonwebtoken'
 import userModel from './../models/userModel.js';
 
 
-const createToken = (id) =>{
-    return jwt.sign({id},process.env.JWT_SECRET)
+const createToken = (id, role) =>{
+    return jwt.sign({id, role},process.env.JWT_SECRET, {expiresIn: "7d"})
 }
 
 // Route for user login
@@ -25,8 +25,8 @@ const loginUser = async (req,res) => {
 
         if (isMatch) {
 
-            const token = createToken(user._id)
-            res.json({success:true, token})
+            const token = createToken(user._id, user.role)
+            res.json({success:true, token, role:user.role, name:user.name})
 
         }
         else {
@@ -47,7 +47,7 @@ const registerUser = async (req,res) => {
     //res.json({msg:"Register API Working"})
     try{
 
-        const {name, email, password} = req.body;
+        const {name, email, password, role} = req.body;
 
         //checking user already exists or not 
         const exists = await userModel.findOne({email})
@@ -70,18 +70,19 @@ const registerUser = async (req,res) => {
         const newUser = new userModel({
             name,
             email,
-            password:hashedPassword
+            password:hashedPassword,
+            role: role || "client" 
         })
 
         const user = await newUser.save()
 
-        const token = createToken(user._id)
+        const token = createToken(user._id, user.role)
         
-        res.json({success:true,token})
+        res.json({success:true,token, role: user.role})
 
     } catch(error) {
         console.log(error);
-        res.json({success:false,message:error.message})
+        res.status(500).json({success:false,message:error.message})
     }
 
 }
