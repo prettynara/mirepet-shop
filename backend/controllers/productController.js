@@ -30,24 +30,42 @@ const addProduct = async (req, res) => {
             })
         )
 
-        console.log( name, brand, description, category, subCategory, bestseller, options)
-        console.log(imagesURL)
+        //console.log( name, brand, description, category, subCategory, bestseller, options)
+        //console.log(imagesURL)
 
-        const newProduct = new productModel({
+        
+        // options 처리 (string → array)
+        let parsedOptions = [];
+        if (options) {
+            try {
+                parsedOptions = JSON.parse(options);
+            } catch (e) {
+                console.log("Options parse error:", e.message);
+                return res.status(400).json({ success: false, message: "Invalid options format" });
+            }
+        }
+    
+        const productData ={
             name,
             brand,
             description,
             category,
             subCategory,
             seller: req.user.id, // 현재 로그인한 seller
-            date: new Date(),
-            bestseller,
-            options: options || [],
-            image: images
-        });
+            date: Date.now(),
+            bestseller : bestseller === 'true' ? true : false,
+            options: parsedOptions,
+            image: imagesURL
+        };
 
-        const savedProduct = await newProduct.save();
-        res.json({ success: true, product: savedProduct });
+        console.log(productData);
+        //console.log("options raw:", options);
+        //console.log("parsedOptions:", parsedOptions);
+
+        const product = new productModel(productData);
+        await product.save()
+
+        res.json({ success: true, message: "Product Added" });
 
     } catch (error) {
         console.log(error);
