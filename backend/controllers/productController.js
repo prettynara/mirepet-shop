@@ -1,5 +1,6 @@
 import userModel from "../models/userModel.js"
 import productModel from "../models/productModel.js";
+import { v2 as cloudinary } from 'cloudinary';
 
 // function for add product for sellers
 
@@ -11,14 +12,26 @@ const addProduct = async (req, res) => {
             return res.status(403).json({ success: false, message: "Not authorized"})
         }
 
-        const { name, brand, description, category, subCategory, size, bestseller, options } = req.body
+        const { name, brand, description, category, subCategory, bestseller, options } = req.body
         
         //이미지 업로드 처리
-        const images = [];
-        if (req.files.image1) images.push(req.files.image1[0]);
-        if (req.files.image2) images.push(req.files.image2[0]);
-        if (req.files.image3) images.push(req.files.image3[0]);
-        if (req.files.image4) images.push(req.files.image4[0]);
+        const image1 = req.files.image1 && req.files.image1[0]
+        const image2 = req.files.image2 && req.files.image2[0]
+        const image3 = req.files.image3 && req.files.image3[0]
+        const image4 = req.files.image4 && req.files.image4[0]
+
+        const images = [image1, image2, image3, image4].filter((item) => item !== undefined )
+
+        let imagesURL = await Promise.all(
+            images.map(async (item)=>{
+
+                let result = await cloudinary.uploader.upload(item.path, {resource_type: 'image'});
+                return result.secure_url
+            })
+        )
+
+        console.log( name, brand, description, category, subCategory, bestseller, options)
+        console.log(imagesURL)
 
         const newProduct = new productModel({
             name,
