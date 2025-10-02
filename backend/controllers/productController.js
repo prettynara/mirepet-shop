@@ -77,6 +77,16 @@ const addProduct = async (req, res) => {
 
 const listProduct = async (req, res) => {
 
+    try {
+
+        const products = await productModel.find({});
+        res.json({success:true, products})
+        
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+        
+    }
+
 }
 
 // function for removing product 
