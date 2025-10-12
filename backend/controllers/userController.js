@@ -8,13 +8,14 @@ const createToken = (id, role) =>{
     return jwt.sign({id, role},process.env.JWT_SECRET, {expiresIn: "7d"})
 }
 
-// Route for user login
+// Route for user login (client + seller)
 const loginUser = async (req,res) => {
 
     try {
 
         const {email, password} = req.body;
 
+        // User Login
         const user = await userModel.findOne({email});
 
         if (!user) {
@@ -23,23 +24,21 @@ const loginUser = async (req,res) => {
 
         const isMatch = await bcrypt.compare(password, user.password);
 
-        if (isMatch) {
-
-            const token = createToken(user._id, user.role)
-            res.json({success:true, token, role:user.role, name:user.name})
+        if (!isMatch) {
+            return res.json({success:false, message:"Invalid credentials"})
 
         }
-        else {
-            res.json({success:false, message: 'Invalid credentials'})
-        }
+
+        const token = createToken(user._id, user.role)
+        
+        // client / seller 구분
+        return res.json({success:true, token, role:user.role, name:user.name})
         
     } catch (error) {
-        console.log(error);
-        res.json({success:false,message:error.message})
-        
+        console.log("Login Error:",error);
+        res.status(500).json({success:false, message:error.message})
+
     }
-
-
 }
 
 // Route for user register
@@ -89,7 +88,17 @@ const registerUser = async (req,res) => {
 
 // Route for admin login
 const adminLogin = async (req,res) => {
+try {
+        const { email, password } = req.body;
 
+        if (email === process.env.ADMIN_EMAIL && password === process.env.ADMIN_PASSWORD) {
+            const token = jwt.sign({ email, role: "admin" }, process.env.JWT_SECRET, { expiresIn: "7d" });
+            return res.json({ success: true, token, role: "admin" });
+        } 
+        return res.status(401).json({ success: false, message: "Invalid admin credentials" });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
 
 }
 
