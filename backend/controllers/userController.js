@@ -8,12 +8,24 @@ const createToken = (id, role) =>{
     return jwt.sign({id, role},process.env.JWT_SECRET, {expiresIn: "7d"})
 }
 
-// Route for user login (client + seller)
+// Route for user login (client + seller + admin)
 const loginUser = async (req,res) => {
 
-    try {
 
+    try {
         const {email, password} = req.body;
+
+        // ✅ 1️⃣ .env의 ADMIN 계정 로그인 확인
+         if (email === process.env.ADMIN_EMAIL && password === process.env.ADMIN_PASSWORD) {
+            const token = createToken("admin_fixed_id", "admin"); // admin 고정 ID
+            return res.json({
+            success: true,
+            token,
+            role: "admin",
+            name: "Administrator",
+            message: "Admin login success"
+        });
+        }
 
         // User Login
         const user = await userModel.findOne({email});
@@ -31,7 +43,7 @@ const loginUser = async (req,res) => {
 
         const token = createToken(user._id, user.role)
         
-        // client / seller 구분
+        // client / seller/ admin 구분
         return res.json({success:true, token, role:user.role, name:user.name})
         
     } catch (error) {
@@ -92,8 +104,12 @@ try {
         const { email, password } = req.body;
 
         if (email === process.env.ADMIN_EMAIL && password === process.env.ADMIN_PASSWORD) {
-            const token = jwt.sign({ email, role: "admin" }, process.env.JWT_SECRET, { expiresIn: "7d" });
-            return res.json({ success: true, token, role: "admin" });
+             const adminUser = await userModel.findOne({ email, role: "admin" });
+            if (!adminUser) {
+                return res.status(401).json({ success: false, message: "Admin user not found in DB" });
+            }
+            const token = jwt.sign({ id: adminUser._id.toString(), role: "admin" }, process.env.JWT_SECRET, { expiresIn: "7d" });
+            return res.json({ success: true, token, role: "admin", name: "Administrator", message: "Admin login success" });
         } 
         return res.status(401).json({ success: false, message: "Invalid admin credentials" });
     } catch (error) {

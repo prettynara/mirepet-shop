@@ -5,10 +5,12 @@ import { v2 as cloudinary } from 'cloudinary';
 // function for add product for sellers
 
 const addProduct = async (req, res) => {
+    console.log("req.body:", req.body);
+    console.log("req.files:", req.files);
 
     try {
     
-        if(req.user.role !=="seller"){
+        if(req.user.role !=="seller" && req.user.role !=="admin"){
             return res.status(403).json({ success: false, message: "Not authorized"})
         }
 
@@ -35,6 +37,7 @@ const addProduct = async (req, res) => {
 
         
         // options 처리 (string → array)
+        console.log("options raw:", options);
         let parsedOptions = [];
         if (options) {
             try {

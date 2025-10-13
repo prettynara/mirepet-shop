@@ -12,7 +12,7 @@ const productSchema = new mongoose.Schema({
     name: { type: String, required: true },
     brand: { type: String }, // optional
     description: { type: String, required: true },
-    image: [{ type: Array, required: true }], // 배열 (최대 4장)
+    image: [{ type: String, required: true }], // 배열 (최대 4장)
     category: { type: String, required: true },
     subCategory: { type: String, required: true },
     seller: { type: String, required: true },

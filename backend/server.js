@@ -20,6 +20,7 @@ app.use(cors())
 //api endpoints
 app.use('/api/user',userRouter)
 app.use('/api/product',productRouter)
+console.log("✅ productRouter mounted on /api/product");
 
 app.get('/',(req,res)=>{
     res.send("API Working")
