@@ -14,14 +14,22 @@ const AdminNavbar = () => {
             Admin Panel
           </h1>
         </div>
+
+        {/* Desktop Menu */}
         <ul className="hidden sm:flex gap-8 text-xl text-gray-700">
-          {["DASHBOARD", "SELLERS", "CLIENTS", "PRODUCTS", "ORDERS"].map((item) => (
+          {["DASHBOARD", "SELLERS", "CLIENTS", "PRODUCTS", "ORDERS"].map((item) => {
+            let path = "";
+
+            if (item === "SELLERS") path = "/sellers";
+            else if (item === "CLIENTS") path = "/clients";
+            else if (item === "PRODUCTS") path = "/products";
+            else if (item === "ORDERS") path = "/orders";
+            else path = `/admin/${item.toLowerCase()}`;
+
+            return (
             <NavLink
               key={item}
-              to={ item === "PRODUCTS"
-                ? `/products`
-                :`/admin/${item.toLowerCase()}`}
-              
+              to={path}
               className={({ isActive }) =>
                 `relative flex flex-col items-center group ${
                   isActive ? "text-blue-600 font-semibold" : "hover:text-blue-600"
@@ -31,11 +39,14 @@ const AdminNavbar = () => {
               <span>{item}</span>
               <span className="absolute -bottom-1 w-0 h-[2px] bg-blue-600 rounded group-hover:w-1/2 transition-all duration-300"></span>
             </NavLink>
-          ))}
+            );
+          })}
+
         </ul>
         <button className="bg-blue-500 hover:bg-blue-600 transition-colors text-white px-6 py-2 rounded-full shadow-sm text-sm font-medium">
           Logout
         </button>
+
         {/* Mobile Menu Button */}
         <img
           onClick={() => setVisible(true)}
@@ -53,9 +64,10 @@ const AdminNavbar = () => {
             <p>Back</p>
           </div>
           <NavLink onClick={() => setVisible(false)} className='py-2 pl-6 border' to='/admin/dashboard'>DASHBOARD</NavLink>
-          <NavLink onClick={() => setVisible(false)} className='py-2 pl-6 border' to='/admin/sellers'>SELLERS</NavLink>
-          <NavLink onClick={() => setVisible(false)} className='py-2 pl-6 border' to='/admin/clients'>CLIENTS</NavLink>
+          <NavLink onClick={() => setVisible(false)} className='py-2 pl-6 border' to='/sellers'>SELLERS</NavLink>
+          <NavLink onClick={() => setVisible(false)} className='py-2 pl-6 border' to='/clients'>CLIENTS</NavLink>
           <NavLink onClick={() => setVisible(false)} className='py-2 pl-6 border' to='/products'>PRODUCTS</NavLink>
+          <NavLink onClick={() => setVisible(false)} className='py-2 pl-6 border' to='/admin/orders'>ORDERS</NavLink>
         </div>
       </div>
 
