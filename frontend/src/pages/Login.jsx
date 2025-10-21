@@ -21,8 +21,12 @@ const Login = () => {
     } else {
       // 로그인 로직 (추후 백엔드 연동)
       console.log('로그인 처리');
+      if (role === 'customer') navigate('/Home');
+      else if (role === 'seller') navigate('/seller/dashboard');
+      else if (role === 'admin') navigate('/admin/dashboard');
+      else navigate('/'); // guest 기본 페이지
+      }
     }
-  }
 
   return (
     <form onSubmit={onSubmitHandler} className='flex flex-col items-center w-[90%] sm:max-w-md m-auto mt-20 gap-5 text-gray-800 bg-white p-8 rounded-xl shadow-md'>

@@ -23,7 +23,6 @@ const AdminNavbar = () => {
             if (item === "SELLERS") path = "/sellers";
             else if (item === "CLIENTS") path = "/clients";
             else if (item === "PRODUCTS") path = "/products";
-            else if (item === "ORDERS") path = "/orders";
             else path = `/admin/${item.toLowerCase()}`;
 
             return (
