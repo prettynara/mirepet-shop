@@ -1,11 +1,17 @@
 import React, { useState } from 'react'
 import { assets } from './../assets/assets';
-import { NavLink, Link } from 'react-router-dom';
+import { NavLink, Link, useNavigate } from 'react-router-dom';
 import MyProducts from './../pages/MyProducts';
 import Sellers from './../pages/Sellers';
 
 const SellerNavbar = () => {
   const [visible, setVisible] = useState(false);
+  const navigate = useNavigate();
+  
+    const handleLogout = () => {
+      localStorage.removeItem('token');
+      navigate('/');
+    };
 
   return (
       <div className="fixed top-0 left-0 w-full bg-white/90 backdrop-blur-md shadow-md z-30">
@@ -46,7 +52,7 @@ const SellerNavbar = () => {
             })}
   
           </ul>
-          <button className="bg-blue-500 hover:bg-blue-600 transition-colors text-white px-6 py-2 rounded-full shadow-sm text-sm font-medium">
+          <button onClick={handleLogout} className="bg-blue-500 hover:bg-blue-600 transition-colors text-white px-6 py-2 rounded-full shadow-sm text-sm font-medium">
             Logout
           </button>
   

@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 const Login = () => {
 
   const [currentState, setCurrentState] =useState('Sign Up');
-  const [role, setRole] = useState('customer'); // 기본값: customer
+  const [role, setRole] = useState('guest'); // 기본값: guest
   const navigate = useNavigate();
 
   const onSubmitHandler = async (event) => {

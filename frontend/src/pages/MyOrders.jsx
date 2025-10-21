@@ -1,9 +1,25 @@
-import React, { useContext } from "react";
+import React, { useContext, useState } from "react";
 import { ShopContext } from "../context/ShopContext";
 import ProductsTitle from "../components/ProductsTitle";
 
 const MyOrders = () => {
   const { products, currency } = useContext(ShopContext);
+
+  const [orderStatus, setOrderStatus] = useState({}); // 주문 상태 관리
+
+  const handleStatusChange = (index, status) => {
+    setOrderStatus((prev) => ({
+      ...prev,
+      [index]: status,
+    }));
+  }
+
+  const colorMap = {
+    "Mark Ready": "bg-yellow-400 text-white",
+    "Out for Delivery": "bg-blue-500 text-white",
+    "Mark Delivered": "bg-green-500 text-white",
+    "Out of Stock": "bg-red-500 text-white",
+  };
 
   return (
     <div className="border-t pt-14 px-4 sm:px-8 lg:px-20 min-h-[80vh]">
@@ -19,6 +35,7 @@ const MyOrders = () => {
 
           // 가격 계산
           const price = option?.sale_price || option?.price;
+          const currentStatus = orderStatus[index];
 
           return (
             <div
@@ -27,7 +44,16 @@ const MyOrders = () => {
             >
               {/* 주문 상단: 주문번호 + 날짜 */}
               <div className="flex justify-between items-center mb-4">
-                <p className="font-semibold">Order #{1000 + index}</p>
+                <div className="flex items-center gap-3">
+                  <p className="font-semibold text-lg">Order #{1000 + index}</p>
+                  {currentStatus && (
+                    <span
+                      className={`px-4 py-1.5 rounded text-sm font-medium opacity-90 cursor-default ${colorMap[currentStatus]}`}
+                    >
+                      {currentStatus}
+                    </span>
+                  )}
+                </div>
                 <p className="text-gray-500 text-sm">17 Sep, 2025</p>
               </div>
 
@@ -71,19 +97,21 @@ const MyOrders = () => {
               </div>
 
               {/* 주문 상태 변경 버튼 */}
-              <div className="mt-4 flex gap-3">
-                <button className="bg-yellow-400 hover:bg-yellow-500 px-4 py-2 rounded text-white text-sm">
-                  Mark Ready
-                </button>
-                <button className="bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded text-white text-sm">
-                  Out for Delivery
-                </button>
-                <button className="bg-green-500 hover:bg-green-600 px-4 py-2 rounded text-white text-sm">
-                  Mark Delivered
-                </button>
-                <button className="bg-red-500 hover:bg-red-600 px-4 py-2 rounded text-white text-sm">
-                  Out of Stock
-                </button>
+              <div className="mt-4 flex gap-3 flex-wrap">
+                {Object.keys(colorMap).map((status, i) => {
+                  const isActive = currentStatus === status;
+                  return (
+                      <button
+                        key={i}
+                        onClick={() => handleStatusChange(index, status)}
+                        className={`${colorMap[status]} ${
+                          isActive ? "ring-4 ring-offset-2 ring-gray-300" : ""
+                        } px-4 py-2 rounded text-white text-sm transition`}
+                      >
+                        {status}
+                      </button>
+                    );
+                  })}
               </div>
             </div>
           );
