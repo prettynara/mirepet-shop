@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { assets } from './../assets/assets';
-import { NavLink } from 'react-router-dom';
+import { NavLink, Link } from 'react-router-dom';
+import Admin from './../pages/Admin';
 
 const AdminNavbar = () => {
   const [visible, setVisible] = useState(false);
@@ -9,7 +10,7 @@ const AdminNavbar = () => {
     <div className="fixed top-0 left-0 w-full bg-white/90 backdrop-blur-md shadow-md z-30">
       <div className="max-w-7xl mx-auto flex items-center justify-between px-6 py-4 font-medium">
         <div className="flex items-center gap-4">
-          <img src={assets.logo} className="w-36" alt="Logo" />
+          <Link to='/admin'><img src={assets.logo} className="w-36" alt="Logo" /></Link>
           <h1 className="inline-flex items-center gap-2 bg-[#2563EB] text-white font-medium px-3 sm:px-4 py-1 rounded-full shadow-sm text-sm sm:text-lg">
             Admin Panel
           </h1>

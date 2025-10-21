@@ -1,10 +1,18 @@
 import React from 'react'
-import AdminNavbar from './../components/AdminNavbar';
+import Hero from '../components/Hero'
+import SpecialPrice from '../components/SpecialPrice'
+import BestSeller from '../components/BestSeller'
+import OurPolicy from '../components/OurPolicy'
+import NewsletterBox from '../components/NewsletterBox'
 
 const Admin = () => {
   return (
     <div>
-      <AdminNavbar />
+      <Hero />
+      <SpecialPrice />
+      <BestSeller />
+      <OurPolicy />
+      <NewsletterBox />
     </div>
   )
 }
