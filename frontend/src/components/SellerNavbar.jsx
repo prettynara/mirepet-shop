@@ -8,8 +8,12 @@ const SellerNavbar = () => {
   const [visible, setVisible] = useState(false);
   const navigate = useNavigate();
   
+    //Importing petshop name
+    const petshopName = localStorage.getItem('petshopName') || 'Seller';
+
     const handleLogout = () => {
       localStorage.removeItem('token');
+      localStorage.removeItem('petshopName');
       navigate('/');
     };
 
@@ -19,7 +23,7 @@ const SellerNavbar = () => {
           <div className="flex items-center gap-4">
             <Link to='/sellers'><img src={assets.logo} className="w-36" alt="Logo" /></Link>
             <h1 className="inline-flex items-center gap-2 bg-[#2563EB] text-white font-medium px-3 sm:px-4 py-1 rounded-full shadow-sm text-sm sm:text-lg">
-              Seller
+              Hello, {petshopName}
             </h1>
           </div>
   
