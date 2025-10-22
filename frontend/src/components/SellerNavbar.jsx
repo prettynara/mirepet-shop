@@ -56,7 +56,8 @@ const SellerNavbar = () => {
           <div className='flex items-center gap-6'>
             {/* Profile */}
             <div className='group relative'>
-                <Link to='/SellerProfile'><img className='w-8 cursor-pointer' src={assets.profile_icon} alt=""/></Link>
+
+                <Link to='/seller-profile'><img className='w-8 cursor-pointer' src={assets.profile_icon} alt=""/></Link>
                 <div className='group-hover:block hidden absolute dropdown-menu right-0 pt-4'>
                     <div className='flex flex-col gap-2 w-36 py-3 px-5 bg-slate-100 text-gray-500 rounded'>
                         <p className='cursor-pointer hover:text-black' onClick={() => navigate('/seller-profile')}>My profile</p>
@@ -73,7 +74,7 @@ const SellerNavbar = () => {
             </Link>
   
           </div>
-          
+
           {/* Mobile Menu Button */}
           <img
             onClick={() => setVisible(true)}
