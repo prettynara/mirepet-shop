@@ -22,6 +22,7 @@ import AdminNavbar from './components/AdminNavbar';
 import { useRole } from './context/RoleContext';
 import Footer from './components/Footer';
 import SearchBar from './components/SearchBar';
+import SellerProfile from './pages/SellerProfile';
 import { ToastContainer} from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -58,6 +59,7 @@ const App = () => {
         <Route path='/myproducts' element={<MyProducts />} />
         <Route path='/sellers' element={<Sellers />} />
         <Route path='/upload-product' element={<UploadProduct />} />
+        <Route path='/seller-profile' element={<SellerProfile />} />
       </Routes>
       <Footer/>
     </div>

@@ -52,9 +52,17 @@ const SellerNavbar = () => {
             })}
   
           </ul>
-          <button onClick={handleLogout} className="bg-blue-500 hover:bg-blue-600 transition-colors text-white px-6 py-2 rounded-full shadow-sm text-sm font-medium">
-            Logout
-          </button>
+            {/* Profile */}
+            <div className='group relative'>
+                <Link to='/login'><img className='w-8 cursor-pointer' src={assets.profile_icon} alt=""/></Link>
+                <div className='group-hover:block hidden absolute dropdown-menu right-0 pt-4'>
+                    <div className='flex flex-col gap-2 w-36 py-3 px-5 bg-slate-100 text-gray-500 rounded'>
+                        <p className='cursor-pointer hover:text-black' onClick={() => navigate('/seller-profile')}>My profile</p>
+                        <p className='cursor-pointer hover:text-black' onClick={handleLogout}>Logout</p>
+
+                    </div>
+                </div>
+            </div>
   
           {/* Mobile Menu Button */}
           <img
