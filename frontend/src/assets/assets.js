@@ -14,6 +14,7 @@ import star_icon from './star_icon.png';
 import cross_icon from './cross_icon.png';
 import star_dull_icon from './star_dull_icon.png';
 import bin_icon from './bin_icon.png';
+import neworder_icon from './neworder_icon.png';
 import card_logo from './card_logo.png';
 import about_img from './about_img.jpg';
 import contact_img from './contact_img.jpg';
@@ -62,6 +63,7 @@ export const assets = {
     star_icon,
     star_dull_icon,
     bin_icon,
+    neworder_icon,
     card_logo,
     about_img,
     contact_img,
