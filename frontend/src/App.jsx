@@ -23,6 +23,7 @@ import { useRole } from './context/RoleContext';
 import Footer from './components/Footer';
 import SearchBar from './components/SearchBar';
 import SellerProfile from './pages/SellerProfile';
+import ClientProfile from './pages/ClientProfile';
 import { ToastContainer} from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -31,7 +32,7 @@ const App = () => {
   const { role, setRole } = useRole(); //임의로 admin 설정
   useEffect(() => {   //임의로 admin 설정
     setRole("seller"); //임의로 admin 설정
-  }, []); //임의로 admin 설정 
+  }, []); //임의로 admin 설정
 
   let navbarComponent = <Navbar />;
   if (role === 'seller') navbarComponent = <SellerNavbar />;
@@ -60,6 +61,7 @@ const App = () => {
         <Route path='/sellers' element={<Sellers />} />
         <Route path='/upload-product' element={<UploadProduct />} />
         <Route path='/seller-profile' element={<SellerProfile />} />
+        <Route path='/client-profile' element={<ClientProfile />} />
       </Routes>
       <Footer/>
     </div>

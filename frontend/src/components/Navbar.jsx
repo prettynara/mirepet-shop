@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react'
+import React, { useState, useContext, useEffect } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { assets } from './../assets/assets';
 import { ShopContext } from '../context/ShopContext';
@@ -11,6 +11,29 @@ const Navbar = () => {
     const{getCartCount} = useContext(ShopContext);
     const navigate = useNavigate();
 
+    //Bringing user information
+    const [user, setUser] = useState(null);
+    
+    {/* useEffect(() => {
+      fetch('/api/me', {credentials: 'include'})
+      .then(res => res.json())
+      .then(data => {
+        if(data && data.clientName) setUser(data);
+        else setUser(null);
+        })
+        .catch(() => setUser(null));
+      }, []); */}
+
+      useEffect(() => {
+        setUser ({clientName : "Test Client"});
+      }, []);
+
+    const handleLogout = async () => {
+      await fetch('api/logout', {method: 'POST', credentials: 'include'});
+      setUser(null)
+      navigate('/');
+    };
+    
     const handleSearchClick = () => {
     // 검색어가 없으면 Products 페이지 이동만
         navigate('/products');
@@ -18,6 +41,7 @@ const Navbar = () => {
         setFocusSearch(true);
     }
 
+  const clientName = user?.clientName;
 
   return (
     // this is where i put the logo left up and home for right up
@@ -26,7 +50,14 @@ const Navbar = () => {
       <div className="max-w-7xl mx-auto flex items-center justify-between px-6 py-4 font-medium">
 
         {/* Logo */}
-        <Link to='/'><img src={assets.logo} className='w-36' alt="" /></Link>
+        <div className="flex items-center gap-4">
+            <Link to='/'><img src={assets.logo} className='w-36' alt="" /></Link>
+            {user && (
+                <h1 className="inline-flex items-center gap-2 bg-[#2563EB] text-white font-medium px-3 sm:px-4 py-1 rounded-full shadow-sm text-sm sm:text-lg">
+                    Hello, {user.clientName}
+                </h1>
+            )}
+        </div>
       
       {/* Desktop Menu */}
       <ul className="hidden sm:flex gap-8 text-xl text-gray-700">
@@ -47,9 +78,15 @@ const Navbar = () => {
                 <Link to='/login'><img className='w-8 cursor-pointer' src={assets.profile_icon} alt=""/></Link>
                 <div className='group-hover:block hidden absolute dropdown-menu right-0 pt-4'>
                     <div className='flex flex-col gap-2 w-36 py-3 px-5 bg-slate-100 text-gray-500 rounded'>
+                      {user? (
+                        <>
+                          <p className='cursor-pointer hover:text-black' onClick={() => navigate('/client-profile')}>My Profile</p>
+                          <p className='cursor-pointer hover:text-black' onClick={handleLogout}>Logout</p>
+                        </>
+                      ) : (
                         <p className='cursor-pointer hover:text-black' onClick={() => navigate('/login')}>Login</p>
-                        <p className='cursor-pointer hover:text-black' onClick={() => navigate('/orders')}>Order</p>
-
+                    )}
+                      <p className='cursor-pointer hover:text-black' onClick={() => navigate('/orders')}>Order</p>
                     </div>
                 </div>
             </div>

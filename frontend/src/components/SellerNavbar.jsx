@@ -1,21 +1,31 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { assets } from './../assets/assets';
 import { NavLink, Link, useNavigate } from 'react-router-dom';
-import MyProducts from './../pages/MyProducts';
-import Sellers from './../pages/Sellers';
+
 
 const SellerNavbar = () => {
   const [visible, setVisible] = useState(false);
+  const [user, setUser] = useState(null);
   const navigate = useNavigate();
   
     //Importing petshop name
-    const petshopName = localStorage.getItem('petshopName') || 'Seller';
+    useEffect(() => {
+    fetch('/api/me', { credentials: 'include' })
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.petshopName) setUser(data);
+        else setUser(null);
+      })
+      .catch(() => setUser(null));
+  }, []);
 
-    const handleLogout = () => {
-      localStorage.removeItem('token');
-      localStorage.removeItem('petshopName');
-      navigate('/');
-    };
+  const handleLogout = async () => {
+    await fetch('/api/logout', { method: 'POST', credentials: 'include' });
+    setUser(null);
+    navigate('/');
+  };
+
+  const petshopName = user?.petshopName || 'Seller';
 
   return (
       <div className="fixed top-0 left-0 w-full bg-white/90 backdrop-blur-md shadow-md z-30">
