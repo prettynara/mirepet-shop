@@ -1,31 +1,51 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
 
-const SellerProfile = () => {
-  const navigate = useNavigate();
-
+const SellerProfile = ({ sellerId }) => {
   const [sellerData, setSellerData] = useState({
-    name: "Happy Paw Petshop",
-    owner: "John Doe",
-    email: "seller@email.com",
-    phone: "+216 12 345 678",
-    address: "123 Avenue Habib Bourguiba, Tunis",
-    description: "We provide quality food and accessories for your pets.",
+    name: "",
+    owner: "",
+    email: "",
+    phone: "",
+    address: "",
+    description: "",
     logo: "",
   });
-
   const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  // MongoDB에서 seller 데이터 가져오기
+  useEffect(() => {
+    const fetchSeller = async () => {
+      try {
+        const res = await axios.get(`/api/sellers/${sellerId}`);
+        setSellerData(res.data);
+      } catch (error) {
+        console.error("Failed to fetch seller data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSeller();
+  }, [sellerId]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setSellerData({ ...sellerData, [name]: value });
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    setIsEditing(false);
-    console.log("Updated Seller Info:", sellerData);
+    try {
+      await axios.put(`/api/sellers/${sellerId}`, sellerData);
+      setIsEditing(false);
+      alert("Seller profile updated successfully!");
+    } catch (error) {
+      console.error("Failed to save seller data:", error);
+    }
   };
+
+  if (loading) return <p className="text-center mt-16">Loading...</p>;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex justify-center items-start py-16">
