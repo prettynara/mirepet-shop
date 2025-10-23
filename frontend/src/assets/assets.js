@@ -489,4 +489,14 @@ export const sellers = [
     description: "Everything for your cat, from toys to health care.",
     createdAt: "2025-03-10",
   },
+  {
+    _id: "4",
+    name: "Mirepet shop",
+    owner: "Nara",
+    phone: "216 96 219 828",
+    address: "Immeble Blue square tunis",
+    logo: logo,
+    description: "Everything for your cat, from toys to health care.",
+    createdAt: "2025-03-10",
+  },
 ];

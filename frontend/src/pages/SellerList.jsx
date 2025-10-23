@@ -1,12 +1,13 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ProductsTitle from "../components/ProductsTitle";
-import { sellers } from '../assets/assets'; // ✅ sellers를 직접 import
+import { sellers } from '../assets/assets';
 
 const Sellers = () => {
   const [filteredSellers, setFilteredSellers] = useState(sellers);
   const [search, setSearch] = useState("");
   const [sortType, setSortType] = useState("name");
+  const [likedSellers, setLikedSellers] = useState({}); // 하트 클릭 상태
   const navigate = useNavigate();
 
   const handleSearch = (e) => {
@@ -25,6 +26,14 @@ const Sellers = () => {
     if (type === "recent")
       sorted.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     setFilteredSellers(sorted);
+  };
+
+  const toggleLike = (id, e) => {
+    e.stopPropagation(); // 카드 클릭 이벤트 방지
+    setLikedSellers((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
   };
 
   return (
@@ -55,8 +64,16 @@ const Sellers = () => {
           <div
             key={seller._id}
             onClick={() => navigate(`/admin/sellers/${seller._id}`)}
-            className="cursor-pointer bg-white border border-blue-100 shadow-md rounded-2xl hover:shadow-lg hover:-translate-y-1 transition-all duration-200 overflow-hidden"
+            className="relative cursor-pointer bg-white border border-blue-100 shadow-md rounded-2xl hover:shadow-lg hover:-translate-y-1 transition-all duration-200 overflow-hidden"
           >
+            {/* 하트 버튼 */}
+            <button
+              onClick={(e) => toggleLike(seller._id, e)}
+              className="absolute top-3 right-3 z-10 text-red-500 text-2xl"
+            >
+              {likedSellers[seller._id] ? "❤️" : "🤍"}
+            </button>
+
             <div className="relative w-full h-40 bg-blue-50 flex justify-center items-center">
               {seller.logo ? (
                 <img
