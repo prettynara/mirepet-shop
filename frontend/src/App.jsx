@@ -24,6 +24,8 @@ import Footer from './components/Footer';
 import SearchBar from './components/SearchBar';
 import SellerProfile from './pages/SellerProfile';
 import ClientProfile from './pages/ClientProfile';
+import ClientList from './pages/ClientList';
+import SellerList from './pages/SellerList';
 import { ToastContainer} from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -31,7 +33,7 @@ const App = () => {
   // const { role } = useRole(); 
   const { role, setRole } = useRole(); //임의로 admin 설정
   useEffect(() => {   //임의로 admin 설정
-    setRole("seller"); //임의로 admin 설정
+    setRole("admin"); //임의로 admin 설정
   }, []); //임의로 admin 설정
 
   let navbarComponent = <Navbar />;
@@ -62,6 +64,8 @@ const App = () => {
         <Route path='/upload-product' element={<UploadProduct />} />
         <Route path='/seller-profile' element={<SellerProfile />} />
         <Route path='/client-profile' element={<ClientProfile />} />
+        <Route path='/client-list' element={<ClientList />} />
+        <Route path='/seller-list' element={<SellerList />} />
       </Routes>
       <Footer/>
     </div>

@@ -27,8 +27,8 @@ const AdminNavbar = () => {
           {["DASHBOARD", "SELLERS", "CLIENTS", "PRODUCTS", "ORDERS"].map((item) => {
             let path = "";
 
-            if (item === "SELLERS") path = "/sellers";
-            else if (item === "CLIENTS") path = "/clients";
+            if (item === "SELLERS") path = "/seller-list";
+            else if (item === "CLIENTS") path = "/client-list";
             else if (item === "PRODUCTS") path = "/products";
             else path = `/admin/${item.toLowerCase()}`;
 

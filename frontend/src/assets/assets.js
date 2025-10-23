@@ -42,7 +42,9 @@ import ctoy1 from './ctoy1.png'
 import ctoy2 from './ctoy2.jpg'
 import btoy1 from './btoy1.jpg'
 import btoy2 from './btoy2.jpeg'
-
+import sellerLogo1 from './sellerLogo1.jpg'
+import sellerLogo2 from './sellerLogo2.jpg'
+import sellerLogo3 from './sellerLogo3.jpg'
 
 export const assets = {
     logo,
@@ -82,7 +84,10 @@ export const assets = {
     dtoy1,
     dtoy2,
     btoy1,
-    btoy2
+    btoy2,
+    sellerLogo1,
+    sellerLogo2,
+    sellerLogo3
 
 }
 
@@ -452,3 +457,36 @@ export const products = [
 },
 
 ]
+
+export const sellers = [
+  {
+    _id: "1",
+    name: "Happy Paws Petshop",
+    owner: "Alice",
+    phone: "216 12 345 678",
+    address: "123 Pet Street, Seoul",
+    logo: sellerLogo1,
+    description: "All your pet needs in one place.",
+    createdAt: "2025-01-01",
+  },
+  {
+    _id: "2",
+    name: "Furry Friends",
+    owner: "Bob",
+    phone: "216 34 567 890",
+    address: "456 Doggo Ave, Busan",
+    logo: sellerLogo2,
+    description: "Premium treats and toys for your furry friends.",
+    createdAt: "2025-02-15",
+  },
+  {
+    _id: "3",
+    name: "Kitty Corner",
+    owner: "Charlie",
+    phone: "216 12 345 678",
+    address: "789 Cat Lane, Incheon",
+    logo: sellerLogo3,
+    description: "Everything for your cat, from toys to health care.",
+    createdAt: "2025-03-10",
+  },
+];
