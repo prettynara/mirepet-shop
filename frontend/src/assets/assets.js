@@ -500,3 +500,35 @@ export const sellers = [
     createdAt: "2025-03-10",
   },
 ];
+
+export const clients = [
+  {
+  _id: "c1",
+    name: "John Doe",
+    email: "john@example.com",
+    phone: "010-1234-5678",
+    address: "123 Main Street, City",
+    pets: [
+      { name: "Buddy", type: "Dog", breed: "Golden Retriever", dob: "2018-06-01" },
+      { name: "Kitty", type: "Cat", breed: "Siamese", dob: "2020-09-15" },
+    ],
+  },
+  {
+    _id: "c2",
+    name: "Jane Smith",
+    email: "jane@example.com",
+    phone: "010-9876-5432",
+    address: "456 Oak Avenue, City",
+    pets: [
+      { name: "Max", type: "Dog", breed: "Beagle", dob: "2019-08-12" },
+    ],
+  },
+  {
+    _id: "c3",
+    name: "Alice Johnson",
+    email: "alice@example.com",
+    phone: "010-2468-1357",
+    address: "789 Pine Street, City",
+    pets: [],
+  },
+];

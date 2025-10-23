@@ -63,13 +63,13 @@ const Sellers = () => {
         {filteredSellers.map((seller) => (
           <div
             key={seller._id}
-            onClick={() => navigate(`/admin/sellers/${seller._id}`)}
+            onClick={() => navigate(`/seller-detail/${seller._id}`)}
             className="relative cursor-pointer bg-white border border-blue-100 shadow-md rounded-2xl hover:shadow-lg hover:-translate-y-1 transition-all duration-200 overflow-hidden"
           >
             {/* 하트 버튼 */}
             <button
               onClick={(e) => toggleLike(seller._id, e)}
-              className="absolute top-3 right-3 z-10 text-red-500 text-2xl"
+              className="absolute top-3 right-3 z-10 text-xl transition-all duration-200"
             >
               {likedSellers[seller._id] ? "❤️" : "🤍"}
             </button>

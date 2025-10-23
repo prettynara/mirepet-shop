@@ -61,12 +61,26 @@ const Navbar = () => {
       
       {/* Desktop Menu */}
       <ul className="hidden sm:flex gap-8 text-xl text-gray-700">
-          {["HOME", "PRODUCTS", "SELLERS", "ABOUT", "CONTACT"].map((item) => (
-            <NavLink key={item} to={item === "HOME" ? "/" : `/${item.toLowerCase()}`} className={({ isActive }) => `relative flex flex-col items-center group ${isActive ? "text-blue-600 font-semibold" : "hover:text-blue-600"}`}>
-              <span>{item}</span>
-              <span className="absolute -bottom-1 w-0 h-[2px] bg-blue-600 rounded group-hover:w-1/2 transition-all duration-300"></span>
-            </NavLink>
-          ))}
+        {["HOME", "PRODUCTS", "SELLERS", "ABOUT", "CONTACT"].map((item) => (
+          <NavLink
+            key={item}
+            to={
+              item === "HOME"
+                ? "/"
+                : item === "SELLERS"
+                ? "/seller-list"   // SELLERS만 /seller-list로 변경
+                : `/${item.toLowerCase()}`
+            }
+            className={({ isActive }) =>
+              `relative flex flex-col items-center group ${
+                isActive ? "text-blue-600 font-semibold" : "hover:text-blue-600"
+              }`
+            }
+          >
+            <span>{item}</span>
+            <span className="absolute -bottom-1 w-0 h-[2px] bg-blue-600 rounded group-hover:w-1/2 transition-all duration-300"></span>
+          </NavLink>
+        ))}
       </ul>
       
       {/* Search */}

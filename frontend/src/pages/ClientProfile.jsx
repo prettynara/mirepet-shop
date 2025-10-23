@@ -12,6 +12,7 @@ const ClientProfile = ({ clientId }) => {
   const [petData, setPetData] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
+  
 
   // 🚀 서버에서 데이터 불러오기
   useEffect(() => {

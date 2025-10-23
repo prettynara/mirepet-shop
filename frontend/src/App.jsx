@@ -26,6 +26,7 @@ import SellerProfile from './pages/SellerProfile';
 import ClientProfile from './pages/ClientProfile';
 import ClientList from './pages/ClientList';
 import SellerList from './pages/SellerList';
+import SellerDetail from './pages/SellerDetail';
 import { ToastContainer} from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -66,6 +67,7 @@ const App = () => {
         <Route path='/client-profile' element={<ClientProfile />} />
         <Route path='/client-list' element={<ClientList />} />
         <Route path='/seller-list' element={<SellerList />} />
+        <Route path='/seller-detail/:sellerId' element={<SellerDetail />} />
       </Routes>
       <Footer/>
     </div>
