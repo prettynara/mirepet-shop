@@ -64,7 +64,9 @@ const App = () => {
         <Route path='/sellers' element={<Sellers />} />
         <Route path='/upload-product' element={<UploadProduct />} />
         <Route path='/seller-profile' element={<SellerProfile />} />
+        <Route path='/seller/:sellerId' element={<SellerProfile />} />
         <Route path='/client-profile' element={<ClientProfile />} />
+        <Route path='/client/:clientId' element={<ClientProfile />} />
         <Route path='/client-list' element={<ClientList />} />
         <Route path='/seller-list' element={<SellerList />} />
         <Route path='/seller-detail/:sellerId' element={<SellerDetail />} />

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import ProductsTitle from "../components/ProductsTitle";
 import { sellers } from '../assets/assets';
 
-const Sellers = () => {
+const Sellers = ({ userRole = "admin" }) => {
   const [filteredSellers, setFilteredSellers] = useState(sellers);
   const [search, setSearch] = useState("");
   const [sortType, setSortType] = useState("name");
@@ -36,6 +36,21 @@ const Sellers = () => {
     }));
   };
 
+  // admin function
+  {/* const handleEdit = (e, id) => {
+    e.stopPropagation();
+    navigate(`/seller-profile/${id}`, { state: { startEditing: true } });
+  } */} // admin edit function is not needed now
+
+  const handleDelete = (e, id) => {
+    e.stopPropagation();
+    if (window.confirm("Are you sure you want to delete this seller?")) {
+      // 나중에 backend 연결시 axios.delete(`/api/sellers/${id}`) 등으로 변경
+      alert(`Seller ${id} deleted`);
+      setFilteredSellers(filteredSellers.filter((s) => s._id !== id));
+    }
+  }
+
   return (
     <div className="pt-12 border-t min-h-screen bg-blue-50/30">
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-8 px-6">
@@ -66,13 +81,33 @@ const Sellers = () => {
             onClick={() => navigate(`/seller-detail/${seller._id}`)}
             className="relative cursor-pointer bg-white border border-blue-100 shadow-md rounded-2xl hover:shadow-lg hover:-translate-y-1 transition-all duration-200 overflow-hidden"
           >
-            {/* 하트 버튼 */}
+            {/* Heart for only Client */}
+            {userRole === "client" && (
             <button
               onClick={(e) => toggleLike(seller._id, e)}
               className="absolute top-3 right-3 z-10 text-xl transition-all duration-200"
             >
               {likedSellers[seller._id] ? "❤️" : "🤍"}
             </button>
+            )}
+
+            {/* Admin Edit/Delete Buttons */}
+            {userRole === "admin" && (
+               <div className="absolute top-3 right-3 flex gap-2 z-10">
+                {/* <button
+                  onClick={(e) => handleEdit(e, seller._id)}
+                  className="bg-yellow-400 hover:bg-yellow-500 text-white px-2 py-1 text-xs rounded-md shadow"
+                >
+                  Edit
+                </button>  admin edit function is not needed now */} 
+                <button
+                  onClick={(e) => handleDelete(e, seller._id)}
+                  className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 text-xs rounded-md shadow"
+                >
+                  Delete
+                </button>
+              </div>
+            )}
 
             <div className="relative w-full h-40 bg-blue-50 flex justify-center items-center">
               {seller.logo ? (
