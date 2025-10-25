@@ -3,7 +3,7 @@ import { clients, assets } from "../assets/assets";
 import { useNavigate } from "react-router-dom";
 import ProductsTitle from "../components/ProductsTitle";
 
-const ClientList = () => {
+const ClientList = ({userRole = "admin"}) => {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [sortType, setSortType] = useState("name");
@@ -29,6 +29,16 @@ const ClientList = () => {
     if (type === "recent")
       sorted.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     setFilteredClients(sorted);
+  };
+
+  // Admin 삭제 기능
+  const handleDelete = (e, clientId) => {
+    e.stopPropagation();
+    if (window.confirm("Are you sure you want to delete this client?")) {
+      // backend 연결시 axios.delete(`/api/clients/${clientId}`) 등으로 변경
+      alert(`client ${clientId} deleted`);
+      setFilteredClients(filteredClients.filter((c) => c._id !== clientId));
+    }
   };
 
   const handleClientClick = (clientId) => {
@@ -65,6 +75,16 @@ const ClientList = () => {
             onClick={() => handleClientClick(client._id)}
             className="bg-white shadow-md rounded-2xl p-5 flex flex-col transition-transform hover:scale-105 cursor-pointer"
           >
+            {/* Admin 삭제 버튼 */}
+            {userRole === "admin" && (
+              <button
+                onClick={(e) => handleDelete(e, client._id)}
+                className="absolute top-3 right-3 bg-red-500 hover:bg-red-600 text-white px-2 py-1 text-xs rounded-md shadow"
+                >
+                Delete
+                </button>
+            )}
+
             <div className="mb-4">
               <h2 className="text-xl font-semibold text-gray-800">{client.name}</h2>
               <p className="text-gray-500">Email: {client.email}</p>
