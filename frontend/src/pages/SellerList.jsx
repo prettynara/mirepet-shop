@@ -1,40 +1,42 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ProductsTitle from "../components/ProductsTitle";
-import { sellers } from '../assets/assets';
+import { sellers as initialSellers} from '../assets/assets';
 
 const Sellers = ({ userRole = "admin" }) => {
-  const [filteredSellers, setFilteredSellers] = useState(sellers);
+  const [filteredSellers, setFilteredSellers] = useState(initialSellers);
   const [search, setSearch] = useState("");
   const [sortType, setSortType] = useState("name");
-  const [likedSellers, setLikedSellers] = useState({}); // 하트 클릭 상태
   const navigate = useNavigate();
 
   const handleSearch = (e) => {
     const value = e.target.value.toLowerCase();
     setSearch(value);
-    const filtered = sellers.filter((s) =>
-      s.name.toLowerCase().includes(value)
-    );
-    setFilteredSellers(filtered);
+    filterAndSetSellers(value, sortType);
   };
 
   const handleSort = (type) => {
     setSortType(type);
-    let sorted = [...filteredSellers];
-    if (type === "name") sorted.sort((a, b) => a.name.localeCompare(b.name));
-    if (type === "recent")
-      sorted.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    setFilteredSellers(sorted);
+    filterAndSetSellers(search, type);
   };
 
-  const toggleLike = (id, e) => {
+  //Admin 보류
+  const toggleHold = (e, id) => {
+    e.stopPropagation();
+    setFilteredSellers((prev) =>
+      prev.map((s) =>
+        s._id === id ? { ...s, isOnHold: !s.isOnHold } : s
+      )
+    );        
+  }
+
+  {/* const toggleLike = (id, e) => {
     e.stopPropagation(); // 카드 클릭 이벤트 방지
     setLikedSellers((prev) => ({
       ...prev,
       [id]: !prev[id],
     }));
-  };
+  }; */}
 
   // admin function
   {/* const handleEdit = (e, id) => {
@@ -46,10 +48,29 @@ const Sellers = ({ userRole = "admin" }) => {
     e.stopPropagation();
     if (window.confirm("Are you sure you want to delete this seller?")) {
       // 나중에 backend 연결시 axios.delete(`/api/sellers/${id}`) 등으로 변경
-      alert(`Seller ${id} deleted`);
-      setFilteredSellers(filteredSellers.filter((s) => s._id !== id));
+      setFilteredSellers((prev) => prev.filter((s) => s._id !== id));
+   }
+ };
+
+ const handleClientClick = (id) => navigate(`seller-detail/${id}`);
+
+ // 검색+정렬+보류 필터
+  const filterAndSetSellers = (searchValue, sort) => {
+    let filtered = initialSellers.filter((s) =>
+      s.name.toLowerCase().includes(searchValue)
+    );
+
+    if (sort === "name") filtered.sort((a, b) => a.name.localeCompare(b.name));
+    if (sort === "recent")
+      filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    // Client/Guest는 보류 숨기기
+    if (userRole !== "admin") {
+      filtered = filtered.filter((s) => !s.isOnHold);
     }
-  }
+
+    setFilteredSellers(filtered);
+  };
 
   return (
     <div className="pt-12 border-t min-h-screen bg-blue-50/30">
@@ -78,28 +99,21 @@ const Sellers = ({ userRole = "admin" }) => {
         {filteredSellers.map((seller) => (
           <div
             key={seller._id}
-            onClick={() => navigate(`/seller-detail/${seller._id}`)}
+            onClick={() => handleClientClick(seller._id)}
             className="relative cursor-pointer bg-white border border-blue-100 shadow-md rounded-2xl hover:shadow-lg hover:-translate-y-1 transition-all duration-200 overflow-hidden"
           >
-            {/* Heart for only Client */}
-            {userRole === "client" && (
-            <button
-              onClick={(e) => toggleLike(seller._id, e)}
-              className="absolute top-3 right-3 z-10 text-xl transition-all duration-200"
-            >
-              {likedSellers[seller._id] ? "❤️" : "🤍"}
-            </button>
-            )}
-
-            {/* Admin Edit/Delete Buttons */}
             {userRole === "admin" && (
-               <div className="absolute top-3 right-3 flex gap-2 z-10">
-                {/* <button
-                  onClick={(e) => handleEdit(e, seller._id)}
-                  className="bg-yellow-400 hover:bg-yellow-500 text-white px-2 py-1 text-xs rounded-md shadow"
+              <div className="absolute top-3 right-3 flex gap-2 z-10">
+                <button
+                  onClick={(e) => toggleHold(e, seller._id)}
+                  className={`px-2 py-1 text-xs rounded-md shadow ${
+                    seller.isOnHold
+                      ? "bg-gray-400 text-white"
+                      : "bg-yellow-400 text-white hover:bg-yellow-500"
+                  }`}
                 >
-                  Edit
-                </button>  admin edit function is not needed now */} 
+                  {seller.isOnHold ? "On Hold" : "Hold"}
+                </button>
                 <button
                   onClick={(e) => handleDelete(e, seller._id)}
                   className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 text-xs rounded-md shadow"
