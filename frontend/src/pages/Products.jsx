@@ -4,6 +4,7 @@ import { assets } from '../assets/assets';
 import ProductsTitle from '../components/ProductsTitle';
 import ProductItem from '../components/ProductItem';
 import SearchBar from '../components/SearchBar';
+import { useRole } from '../context/RoleContext';
 
 const Products = () => {
 
@@ -13,12 +14,12 @@ const Products = () => {
   const [category, setCategory] = useState([]);
   const [subCategory, setSubCategory] = useState([]);
   const [sortType, setSortType] = useState('relevant');
+  const { role } = useRole();
 
   const toggleCategory = (e) => {
     if (category.includes(e.target.value)){
       setCategory(prev=> prev.filter(item => item !== e.target.value))
-    }
-    else {
+    } else {
       setCategory(prev => [...prev, e.target.value])
     }
   }
@@ -26,8 +27,7 @@ const Products = () => {
   const toggleSubCategory = (e) => {
     if (subCategory.includes(e.target.value)){
       setSubCategory(prev=> prev.filter(item => item !== e.target.value))
-  }
-    else {
+  } else {
       setSubCategory(prev => [...prev, e.target.value])
     }
   }
@@ -78,6 +78,14 @@ const Products = () => {
   useEffect(()=>{
     sortProduct();
   },[sortType])
+
+  const handleHold = (productId) => {
+    alert(`Product ${productId} has been put on hold.`);
+  } 
+
+  const handleDelete = (productId) => {
+    alert(`Product ${productId} has been deleted.`);
+  }
 
 
   return (
@@ -144,9 +152,21 @@ const Products = () => {
         <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6'>
           {
             filterProducts.map((item,index)=>(
-              <ProductItem key={index} name={item.name} id={item._id} image={item.image} seller={item.seller} option={item.options[0]} />
-            ))
-          }
+              <div key={index} className="relative">
+              <ProductItem name={item.name} id={item._id} image={item.image} seller={item.seller} option={item.options[0]} />
+           
+              {role === "admin" && (
+                <div className ="absolute top-2 right-2 flex flex-col gap-2">
+                  <button onClick={() => handleHold(item._id)} className="bg-yellow-500 text-white text-xs px-2 py-1 rounded shadow hover:bg-yellow-600">
+                    Hold
+                  </button>
+                  <button onClick={() => handleDelete(item._id)} className="bg-red-500 text-white text-xs px-2 py-1 rounded shadow hover:bg-red-600">
+                    Delete
+                  </button>
+                </div>
+              )}
+              </div>
+            ))}
         </div>
 
       </div>
