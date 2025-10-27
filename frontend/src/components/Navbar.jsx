@@ -14,7 +14,7 @@ const Navbar = () => {
     //Bringing user information
     const [user, setUser] = useState(null);
     
-    {/* useEffect(() => {
+    useEffect(() => {
       fetch('/api/me', {credentials: 'include'})
       .then(res => res.json())
       .then(data => {
@@ -22,11 +22,11 @@ const Navbar = () => {
         else setUser(null);
         })
         .catch(() => setUser(null));
-      }, []); */}
-
-      useEffect(() => {
-        setUser ({clientName : "Test Client"});
       }, []);
+
+      {/*  useEffect(() => {
+        setUser ({clientName : "Test Client"});
+      }, []); */}
 
     const handleLogout = async () => {
       await fetch('api/logout', {method: 'POST', credentials: 'include'});

@@ -1,25 +1,53 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useRole } from '../context/RoleContext';
 
 const Login = () => {
   const [currentState, setCurrentState] = useState('Sign Up');
-  const [role, setRole] = useState('guest'); // 기본값: guest
+  const [role, setRole] = useRole() // RoleContext에서 role 가져오기 
   const navigate = useNavigate();
 
   const onSubmitHandler = async (event) => {
     event.preventDefault();
+
+    const email = event.target[0].value;
+    const password = event.target[1].value;
 
     if (currentState === 'Sign Up') {
       if (role === 'client') navigate('/customer-info');
       else if (role === 'seller') navigate('/seller-info');
     } else {
       console.log('로그인 처리');
+      try {
+        const res = await fetch('http://localhost:5000/api/login', {
+          method: 'POST',
+          header: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        });
+        const data = await res.json();
+
+        if (!data.success) {
+          alert(data.message);
+          return;
+        }
+
+      //RoleContext update
+      setRole(data.role);
+
+      // JWT 저장(선택, 새로고침 후 로그인 유지 가능)
+      localStorage.setItem('token', data.token);
+
+      // role별 화면 이동 
       if (role === 'client') navigate('/Home');
       else if (role === 'seller') navigate('/seller/dashboard');
       else if (role === 'admin') navigate('/admin/dashboard');
       else navigate('/');
+    } catch(err) {
+      console.error(err);
+      alert('Login failed');
     }
   };
+  }
 
   return (
     <form

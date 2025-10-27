@@ -18,11 +18,12 @@ const productSchema = new mongoose.Schema({
     seller: { type: String, required: true },
     date: { type: Date, required:true },
     bestseller: { type: Boolean },
-    options: [optionSchema] // weight/price 옵션 리스트
-  },
-  { timestamps: true }
+    options: [optionSchema], // weight/price 옵션 리스트
+    isOnHold: {type: Boolean, default: false}
+   
+  },{ timestamps: true }
 );
 
-const productModel = mongoose.model.product || mongoose.model("product", productSchema)
+const productModel = mongoose.models.product || mongoose.model("product", productSchema)
 
 export default productModel
