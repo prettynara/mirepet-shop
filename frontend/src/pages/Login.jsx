@@ -4,7 +4,7 @@ import { useRole } from '../context/RoleContext';
 
 const Login = () => {
   const [currentState, setCurrentState] = useState('Sign Up');
-  const [role, setRole] = useRole() // RoleContext에서 role 가져오기 
+  const { role, setRole } = useRole(); // RoleContext에서 role 가져오기
   const navigate = useNavigate();
 
   const onSubmitHandler = async (event) => {
@@ -19,9 +19,9 @@ const Login = () => {
     } else {
       console.log('로그인 처리');
       try {
-        const res = await fetch('http://localhost:5000/api/login', {
+        const res = await fetch('http://localhost:4000/api/login', {
           method: 'POST',
-          header: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password }),
         });
         const data = await res.json();
@@ -31,16 +31,17 @@ const Login = () => {
           return;
         }
 
-      //RoleContext update
-      setRole(data.role);
+      //API에서 받은 role 사용
+      const userRole = data.role;
+      setRole(userRole);
 
       // JWT 저장(선택, 새로고침 후 로그인 유지 가능)
       localStorage.setItem('token', data.token);
 
-      // role별 화면 이동 
-      if (role === 'client') navigate('/Home');
-      else if (role === 'seller') navigate('/seller/dashboard');
-      else if (role === 'admin') navigate('/admin/dashboard');
+      // role별 화면 이동
+      if (userRole === 'client') navigate('/Home');
+      else if (userRole === 'seller') navigate('/seller/dashboard');
+      else if (userRole === 'admin') navigate('/admin/dashboard');
       else navigate('/');
     } catch(err) {
       console.error(err);
