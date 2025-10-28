@@ -17,8 +17,12 @@ connectDB()
 connectCloudinary()
 
 // middlewares
+app.use(cors({
+    origin: 'http://localhost:5173', // react frontend address
+    credentials: true,
+}))
+
 app.use(express.json())
-app.use(cors())
 
 // API endpoints
 app.use('/api/user',userRouter)

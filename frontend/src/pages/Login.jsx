@@ -34,6 +34,7 @@ const Login = () => {
       //API에서 받은 role 사용
       const userRole = data.role;
       setRole(userRole);
+      localStorage.setItem('role', userRole); //새로고침 후에도 유지
 
       // JWT 저장(선택, 새로고침 후 로그인 유지 가능)
       localStorage.setItem('token', data.token);

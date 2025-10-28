@@ -1,15 +1,26 @@
 import React, { useState } from 'react'
 import { assets } from './../assets/assets';
 import { NavLink, Link, useNavigate } from 'react-router-dom';
-import Admin from './../pages/Admin';
+import { useRole } from '../context/RoleContext';
 
 const AdminNavbar = () => {
   const [visible, setVisible] = useState(false);
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    navigate('/');
+  const { setRole } = useRole();
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/logout', {method: 'POST', credentials: 'include'});
+    } catch (err) {
+      console.error('logout request failed', err);
+    } finally {
+      localStorage.removeItem('token');
+      localStorage.removeItem('role');
+      if (typeof setRole === 'function') setRole('guest');
+      setVisible(false);
+      navigate('/');
+    }
   };
 
   return (

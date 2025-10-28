@@ -1,9 +1,15 @@
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useState, useEffect } from "react";
 
 const RoleContext = createContext();
 
 export const RoleProvider = ({ children }) => {
-  const [role, setRole] = useState("guest"); // 기본값: guest
+  const [role, setRole] = useState(localStorage.getItem("role") || "guest"); // 기본값: guest
+
+  // role이 변경될 때 로컬 스토리지에 저장
+  useEffect(() => {
+    localStorage.setItem("role", role);
+  }, [role]);
+  
 
   return (
     <RoleContext.Provider value={{ role, setRole }}>

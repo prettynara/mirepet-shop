@@ -123,4 +123,51 @@ const singleProduct = async (req, res) => {
 
 }
 
-export {listProduct, addProduct, removeProduct, singleProduct}
+// Toggle hold (admin only) - toggle isOnHold flag
+const toggleHold = async (req, res) => {
+    try {
+        console.log('TOGGLE_HOLD called - params:', req.params);
+        console.log('TOGGLE_HOLD - req.headers.authorization:', req.headers.authorization);
+        console.log('TOGGLE_HOLD - req.user:', req.user);
+        // adminAuth middleware should ensure req.user.role === 'admin'
+        const { id } = req.params;
+        const product = await productModel.findById(id);
+        if (!product) 
+            console.log('TOGGLE_HOLD - product not found', id);
+            return res.status(404).json({ success: false, message: 'Product not found' });
+
+        product.isOnHold = !product.isOnHold;
+        await product.save();
+
+        console.log('TOGGLE_HOLD - new isOnHold:', product.isOnHold);
+        return res.json({ success: true, product });
+      } catch (error) {
+        console.error('toggleHold error:', error);
+        return res.status(500).json({ success: false, message: error.message });
+    }
+}
+
+// NEW: delete product (admin only)
+const deleteProduct = async (req, res) => {
+    try {
+        console.log('DELETE_PRODUCT called - params:', req.params);
+        console.log('DELETE_PRODUCT - req.headers.authorization:', req.headers.authorization);
+        console.log('DELETE_PRODUCT - req.user:', req.user);
+
+        const { id } = req.params;
+        const product = await productModel.findById(id);
+        if (!product)
+            console.log('DELETE_PRODUCT - product not found', id);
+            return res.status(404).json({ success: false, message: 'Product not found' });
+
+        // optional: remove cloudinary images if you stored public_id
+        await productModel.deleteOne({ _id: id });
+        console.log('DELETE_PRODUCT - deleted id:', id);
+        return res.json({ success: true, message: 'Product deleted', id });
+    } catch (error) {
+        console.error('deleteProduct error:', error);
+        return res.status(500).json({ success: false, message: error.message });
+    }
+}
+
+export { listProduct, addProduct, removeProduct, singleProduct, toggleHold, deleteProduct };
