@@ -1,7 +1,9 @@
 import validator from "validator";
 import bcrypt from "bcrypt"
 import jwt from 'jsonwebtoken'
+import crypto from 'crypto'
 import userModel from './../models/userModel.js';
+import { sendEmail } from '../utils/email.js';
 
 
 const createToken = (id, role) =>{
@@ -11,24 +13,29 @@ const createToken = (id, role) =>{
 // Route for user login (client + seller + admin)
 const loginUser = async (req,res) => {
 
-
     try {
         const {email, password} = req.body;
 
         // ✅ 1️⃣ .env의 ADMIN 계정 로그인 확인
          if (email === process.env.ADMIN_EMAIL && password === process.env.ADMIN_PASSWORD) {
-            const token = createToken("admin_fixed_id", "admin"); // admin 고정 ID
+            const adminUser = await userModel.findOne({ email, role : 'admin'})
+            if (adminUser) {
+            const token = createToken(adminUser._id.toString(), "admin");   
+            return res.json({ success: ture, token, role: 'admin', name: 'Administrator', message: 'Admin login success'})   
+            }
+            // fallback : sign with fixed id (legacy)
+            const token = createToken('admin_fixed_id', 'admin');
             return res.json({
             success: true,
             token,
             role: "admin",
             name: "Administrator",
-            message: "Admin login success"
         });
         }
+            message: "Admin login success"
 
         // User Login
-        const user = await userModel.findOne({email});
+        const user = await userModel.findOne({email}).select('+password');
 
         if (!user) {
            return res.json({success:false, message:"User doesn't exist"})
@@ -41,7 +48,7 @@ const loginUser = async (req,res) => {
 
         }
 
-        const token = createToken(user._id, user.role)
+        const token = createToken(user._id.toString(), user.role)
         
         // client / seller/ admin 구분
         return res.json({success:true, token, role:user.role, name:user.name})
@@ -87,7 +94,7 @@ const registerUser = async (req,res) => {
 
         const user = await newUser.save()
 
-        const token = createToken(user._id, user.role)
+        const token = createToken(user._id.toString(), user.role)
         
         res.json({success:true,token, role: user.role})
 
@@ -99,23 +106,95 @@ const registerUser = async (req,res) => {
 }
 
 // Route for admin login
-const adminLogin = async (req,res) => {
-try {
-        const { email, password } = req.body;
+const adminLogin = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (email === process.env.ADMIN_EMAIL && password === process.env.ADMIN_PASSWORD) {
+      let adminUser = await userModel.findOne({ email, role: 'admin' });
+      if (!adminUser) {
+        const hashed = await bcrypt.hash(password, 10);
+        adminUser = await userModel.create({ name: 'Administrator', email, password: hashed, role: 'admin' });
+      }
+      const token = createToken(adminUser._id.toString(), 'admin');
+      return res.json({ success: true, token, role: 'admin', name: 'Administrator' });
+    }
+    return res.status(401).json({ success: false, message: 'Invalid admin credentials' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
 
-        if (email === process.env.ADMIN_EMAIL && password === process.env.ADMIN_PASSWORD) {
-             const adminUser = await userModel.findOne({ email, role: "admin" });
-            if (!adminUser) {
-                return res.status(401).json({ success: false, message: "Admin user not found in DB" });
-            }
-            const token = jwt.sign({ id: adminUser._id.toString(), role: "admin" }, process.env.JWT_SECRET, { expiresIn: "7d" });
-            return res.json({ success: true, token, role: "admin", name: "Administrator", message: "Admin login success" });
-        } 
-        return res.status(401).json({ success: false, message: "Invalid admin credentials" });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ success: false, message: 'Email required' });
+    const user = await userModel.findOne({ email });
+    if (!user) return res.json({ success: true, message: 'If an account exists, a reset link has been sent.' });
+
+    const token = crypto.randomBytes(32).toString('hex');
+    const hashed = crypto.createHash('sha256').update(token).digest('hex');
+
+    user.resetPasswordToken = hashed;
+    user.resetPasswordExpire = Date.now() + 60 * 60 * 1000;
+    await user.save();
+
+    const resetUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/reset-password?token=${token}&id=${user._id}`;
+    const html = `<p>Reset: <a href="${resetUrl}">${resetUrl}</a></p>`;
+
+    try {
+      await sendEmail(user.email, 'Password Reset', html);
+    } catch (emailErr) {
+      console.error('sendEmail failed:', emailErr);
+      // UX: don't reveal internal failure — still respond success
+      return res.json({ success: true, message: 'If an account exists, a reset link has been sent.' });
     }
 
+    return res.json({ success: true, message: 'If an account exists, a reset link has been sent.' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Reset password: verify token and change password
+const resetPassword = async (req, res) => {
+  try {
+    const { token, id, password } = req.body;
+    if (!token || !id || !password) return res.status(400).json({ success: false, message: 'Missing fields' });
+
+    const hashed = crypto.createHash('sha256').update(token).digest('hex');
+    const user = await userModel.findOne({
+      _id: id,
+      resetPasswordToken: hashed,
+      resetPasswordExpire: { $gt: Date.now() }
+    }).select('+password');
+
+    if (!user) return res.status(400).json({ success: false, message: 'Invalid or expired token' });
+
+    // set new password (pre-save will hash)
+    user.password = password;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+    await user.save();
+
+    return res.json({ success: true, message: 'Password reset successful' });
+  } catch (err) {
+    console.error('resetPassword error:', err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
 }
 
-export { loginUser,registerUser,adminLogin }
+// Me endpoint: return current user info (authMiddleware should attach req.user)
+const me = async (req, res) => {
+  try {
+    if (!req.user) return res.status(401).json({ success: false, message: 'Not authenticated' });
+    const user = await userModel.findById(req.user.id).select('-password -resetPasswordToken -resetPasswordExpire');
+    return res.json({ success: true, user });
+  } catch (err) {
+    console.error('me error:', err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+}
+
+export { loginUser,registerUser,adminLogin, forgotPassword, resetPassword, me  }

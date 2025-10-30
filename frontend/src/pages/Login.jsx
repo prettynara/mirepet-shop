@@ -7,6 +7,15 @@ const Login = () => {
   const { role, setRole } = useRole(); // RoleContext에서 role 가져오기
   const navigate = useNavigate();
 
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  const [forgotMode, setForgotMode] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotMessage, setForgotMessage] = useState('');
+  const [loading, setLoading] = useState(false);
+
   const onSubmitHandler = async (event) => {
     event.preventDefault();
 
@@ -16,23 +25,24 @@ const Login = () => {
     if (currentState === 'Sign Up') {
       if (role === 'client') navigate('/customer-info');
       else if (role === 'seller') navigate('/seller-info');
-    } else {
-      console.log('로그인 처리');
-      try {
-        const res = await fetch('http://localhost:4000/api/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password }),
-        });
-        const data = await res.json();
+      return;
+    }
 
-        if (!data.success) {
-          alert(data.message);
-          return;
-        }
+    try {
+      const res = await fetch('http://localhost:4000/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+        credentials: 'include'
+      });
+      const data = await res.json();
+      if (!data.success) {
+        alert(data.message);
+        return;
+      }
 
       //API에서 받은 role 사용
-      const userRole = data.role;
+      const userRole = data.role || 'guest';
       setRole(userRole);
       localStorage.setItem('role', userRole); //새로고침 후에도 유지
 
@@ -44,98 +54,151 @@ const Login = () => {
       else if (userRole === 'seller') navigate('/seller/dashboard');
       else if (userRole === 'admin') navigate('/admin/dashboard');
       else navigate('/');
-    } catch(err) {
+    } catch (err) {
       console.error(err);
       alert('Login failed');
     }
   };
+
+  const onForgotSubmit = async (e) => {
+    e.preventDefault();
+    if (!forgotEmail) {
+      setForgotMessage('write your email address.');
+      return;
+    }
+    setLoading(true);
+    setForgotMessage('');
+    try {
+      const res = await fetch('http://localhost:4000/api/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: forgotEmail }),
+        credentials: 'include'
+      });
+      
+      let data = null;
+      try { data = await res.json(); } catch (err) { /* non-json response */ }
+
+      if (res.ok && data?.success) {
+        setForgotMessage(data.message || 'reset link sent to your email.');
+      } else if (data && !data.success) {
+        setForgotMessage(data.message || 'failed the request.');
+      } else {
+        setForgotMessage('no response.');
+      }
+    } catch (err) {
+      console.error(err);
+      setForgotMessage('network error.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
-    <form
-      onSubmit={onSubmitHandler}
-      className="flex flex-col items-center w-[90%] sm:max-w-md m-auto mt-16 gap-6 text-gray-800 bg-gradient-to-br from-blue-50 to-indigo-100 p-10 rounded-3xl shadow-xl"
-    >
-      {/* Title */}
-      <div className="flex items-center gap-4 mb-6 justify-center">
-        <p className="text-3xl font-bold text-indigo-700">{currentState}</p>
-        <hr className="h-[2px] w-10 bg-gray-800 border-none rounded" />
-      </div>
-
-      {/* Input Fields */}
-      {currentState === 'Sign Up' && (
-        <input
-          type="text"
-          placeholder="Name"
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
-          required
-        />
-      )}
-      <input
-        type="email"
-        placeholder="Email"
-        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
-        required
-      />
-      <input
-        type="password"
-        placeholder="Password"
-        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
-        required
-      />
-
-      {/* Role 선택 (회원가입일 때만) */}
-      {currentState === 'Sign Up' && (
-        <div className="w-full flex justify-between text-base md:text-lg text-gray-700 mt-2">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              value="client"
-              checked={role === 'client'}
-              onChange={() => setRole('client')}
-            />
-            Customer
-          </label>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              value="seller"
-              checked={role === 'seller'}
-              onChange={() => setRole('seller')}
-            />
-            Petshop Seller
-          </label>
-        </div>
-      )}
-
-      {/* Links */}
-      <div className="w-full flex justify-between text-sm text-gray-600 mt-[-2px]">
-        <p className="cursor-pointer hover:text-blue-600">Forgot your password?</p>
-        {currentState === 'Login' ? (
-          <p
-            onClick={() => setCurrentState('Sign Up')}
-            className="cursor-pointer hover:text-blue-600"
-          >
-            Create account
-          </p>
-        ) : (
-          <p
-            onClick={() => setCurrentState('Login')}
-            className="cursor-pointer text-blue-600 hover:text-blue-700 font-medium"
-          >
-            Login Here
-          </p>
-        )}
-      </div>
-
-      {/* Submit Button */}
-      <button
-        type="submit"
-        className="bg-gradient-to-r from-indigo-500 to-indigo-600 text-white font-medium px-8 py-3 mt-4 rounded-xl shadow-md hover:from-indigo-600 hover:to-indigo-700 active:scale-95 transition-transform duration-300"
+    <div className="w-full flex justify-center">
+      <form
+        onSubmit={forgotMode ? onForgotSubmit : onSubmitHandler}
+        className="flex flex-col items-center w-[90%] sm:max-w-md m-auto mt-16 gap-6 text-gray-800 bg-gradient-to-br from-blue-50 to-indigo-100 p-10 rounded-3xl shadow-xl"
       >
-        {currentState === 'Login' ? 'Sign In' : 'Sign Up'}
-      </button>
-    </form>
+        {/* Title */}
+        <div className="flex items-center gap-4 mb-6 justify-center">
+          <p className="text-3xl font-bold text-indigo-700">{forgotMode ? 'Forgot Password' : currentState}</p>
+          <hr className="h-[2px] w-10 bg-gray-800 border-none rounded" />
+        </div>
+
+        {/* If forgot mode -> show forgot form */}
+        {forgotMode ? (
+          <>
+            <input
+              type="email"
+              placeholder="Enter your email"
+              value={forgotEmail}
+              onChange={(e) => setForgotEmail(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
+              required
+            />
+            {forgotMessage && <p className="text-sm text-center text-gray-700">{forgotMessage}</p>}
+            <div className="w-full flex gap-3">
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex-1 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white font-medium px-4 py-3 rounded-xl shadow-md hover:from-indigo-600 hover:to-indigo-700 transition"
+              >
+                {loading ? 'Sending...' : 'Send reset link'}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setForgotMode(false); setForgotMessage(''); }}
+                className="flex-1 border border-gray-300 px-4 py-3 rounded-xl bg-white hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Input Fields */}
+            {currentState === 'Sign Up' && (
+              <input
+                type="text"
+                placeholder="Name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg"
+                required
+              />
+            )}
+
+            <input
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg"
+              required
+            />
+
+            <input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg"
+              required
+            />
+
+            {currentState === 'Sign Up' && (
+              <div className="w-full flex justify-between mt-2 text-gray-700">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" value="client" checked={role === 'client'} onChange={() => setRole('client')} />
+                  Customer
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" value="seller" checked={role === 'seller'} onChange={() => setRole('seller')} />
+                  Petshop Seller
+                </label>
+              </div>
+            )}
+
+            <div className="w-full flex justify-between text-sm text-gray-600 mt-2">
+              <p onClick={() => { setForgotMode(true); setForgotMessage(''); }} className="cursor-pointer hover:text-blue-600">
+                Forgot your password?
+              </p>
+
+              {currentState === 'Login' ? (
+                <p onClick={() => setCurrentState('Sign Up')} className="cursor-pointer hover:text-blue-600">Create account</p>
+              ) : (
+                <p onClick={() => setCurrentState('Login')} className="cursor-pointer text-blue-600">Login Here</p>
+              )}
+            </div>
+
+            <button type="submit" className="bg-indigo-600 text-white px-8 py-3 mt-4 rounded-xl">
+              {currentState === 'Login' ? 'Sign In' : 'Sign Up'}
+            </button>
+          </>
+        )}
+      </form>
+    </div>
   );
 };
 

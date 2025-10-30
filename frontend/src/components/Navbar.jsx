@@ -15,14 +15,26 @@ const Navbar = () => {
     const [user, setUser] = useState(null);
     
     useEffect(() => {
-      fetch('/api/me', {credentials: 'include'})
-      .then(res => res.json())
-      .then(data => {
-        if(data && data.clientName) setUser(data);
-        else setUser(null);
-        })
-        .catch(() => setUser(null));
-      }, []);
+      const fetchUser = async () => {
+        try {
+          const token = localStorage.getItem('token'); // 로그인 시 저장한 토큰
+          const res = await fetch('http://localhost:4000/api/me', {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,  // ✅ 토큰 포함
+            },
+            credentials: 'include'
+          });
+          const data = await res.json();
+          console.log('me:', data);
+        } catch (error) {
+          console.error('fetch user error', error);
+        }
+      };
+
+      fetchUser();
+}, []);
+
 
       {/*  useEffect(() => {
         setUser ({clientName : "Test Client"});
