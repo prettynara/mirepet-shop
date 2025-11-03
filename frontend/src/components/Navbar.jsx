@@ -81,8 +81,7 @@ const Navbar = () => {
         setFocusSearch(true);
     }
 
-  const clientName = user?.name || null;
-
+  const clientName = user?.clientName || user?.name || null;
   return (
     // this is where i put the logo left up and home for right up
 
@@ -94,7 +93,7 @@ const Navbar = () => {
             <Link to='/'><img src={assets.logo} className='w-36' alt="" /></Link>
             {user && (
                 <h1 className="inline-flex items-center gap-2 bg-[#2563EB] text-white font-medium px-3 sm:px-4 py-1 rounded-full shadow-sm text-sm sm:text-lg">
-                    Hello, {user.clientName}
+                    Hello, {clientName}
                 </h1>
             )}
         </div>
