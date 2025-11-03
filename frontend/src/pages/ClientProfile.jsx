@@ -81,7 +81,13 @@ const ClientProfile = () => {
           phone: client.phone || "",
           address: client.address || "",
         });
-        setPetData(res.data.pets || []);
+        setPetData(client.pets || []);
+        //normalize pet.dob -> "YYYY-MM-DD" for <input type="date">
+        const normalizedPets = (client.pets || []).map(p => ({
+          ...p,
+          dob: p?.dob ? new Date(p.dob).toISOString().slice(0,10) : ""
+        }));
+          setPetData(normalizedPets);
       } catch (err) {
         console.error("❌ Error fetching client data:", err);
       } finally {
@@ -128,9 +134,15 @@ const ClientProfile = () => {
     } 
     try {
       const token = localStorage.getItem("token");
+      const payload = {
+        ...clientData,
+        pets: petData.map(p => ({...p, dob: p.dob ? new Date(p.dob) : null}))
+      }
       const res = await axios.post(`${API_BASE}/api/client/${clientId}`,
-        { ...clientData, pets: petData },
-        { headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) }, withCredentials: true }
+        payload,
+        {
+          headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, withCredentials: true
+        }
       );
       if (res.data && res.data.success) {
         setIsEditing(false);
@@ -139,10 +151,11 @@ const ClientProfile = () => {
           localStorage.setItem("user", JSON.stringify(res.data.client));
         }
       } else {
+        console.error("Save failed:", res.status, res.data);
         throw new Error(res.data?.message || "Save failed");
       }
     } catch (err) {
-      console.error("❌ Error saving profile:", err);
+      console.error("❌ Error saving profile:", err, err?.response?.data);
       alert("Failed to save changes.");
     }
   };

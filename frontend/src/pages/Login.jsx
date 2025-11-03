@@ -10,6 +10,13 @@ const Login = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [pets, setPets] = useState([]);
+  const addPetField = () => 
+    setPets(prev => [...prev, {name: '', type: '', dob: ''}]);
+  const removePetField = (i) => 
+    setPets(prev => prev.filter((_, index) => index !== i));
+  const updatePetField = (i, key, value) =>
+    setPets(prev => prev.map((p, idx) => (idx === i ? {...p, [key]: value} : p)));
 
   const [forgotMode, setForgotMode] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
@@ -23,10 +30,11 @@ const Login = () => {
 
     if (currentState === 'Sign Up') {
     try {
+      const payload = { name, email, password, role, pets };
       const res = await fetch('http://localhost:4000/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
         credentials: 'include'
       });
 
@@ -42,6 +50,7 @@ const Login = () => {
       // 저장 성공 시 role과 token 저장
       localStorage.setItem('role', userRole);
       localStorage.setItem('token', data.token);
+      if (data.user) localStorage.setItem('user', JSON.stringify(data.user));
       setRole(userRole);
 
       // 회원가입 성공 후 페이지 이동
@@ -229,6 +238,7 @@ const Login = () => {
               className="w-full px-4 py-3 border border-gray-300 rounded-lg"
               required
             />
+            
 
             {currentState === 'Sign Up' && (
               <div className="w-full flex justify-between mt-2 text-gray-700">

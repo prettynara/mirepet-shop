@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+const API_BASE = 'http://localhost:4000';
+
 const CustomerInfo = () => {
   const [pets, setPets] = useState([
     { petName: '', petType: '', customType: '', petBirthDate: '' }
@@ -23,16 +25,80 @@ const CustomerInfo = () => {
     setPets(updatedPets);
   };
 
-  const onSubmitHandler = (e) => {
+  const onSubmitHandler = async (e) => {
     e.preventDefault();
 
+    // normalize pet shape to backend schema: { name, type, breed, dob, photo }
     const finalPets = pets.map((pet) => ({
-      ...pet,
-      petType: pet.petType === 'Etc' ? pet.customType : pet.petType,
+      name: pet.petName || '',
+      type: pet.petType === 'Etc' ? (pet.customType || '') : (pet.petType || ''),
+      breed: '', // no breed field in this form, keep empty
+      dob: pet.petBirthDate || null,
+      photo: '' // optional: can be filled later in profile
     }));
 
-    console.log('고객 추가정보:', finalPets);
-    navigate('/');
+    try {
+      // get client id and token
+      let clientId = null;
+      try {
+        const stored = JSON.parse(localStorage.getItem('user'));
+        if (stored && stored._id) clientId = stored._id;
+      } catch (err) { /* ignore */ }
+
+      // fallback: call /api/me if no user in localStorage
+      if (!clientId) {
+        const token = localStorage.getItem('token');
+        const meRes = await fetch(`${API_BASE}/api/me`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+          },
+          credentials: 'include'
+        });
+        if (meRes.ok) {
+          const meData = await meRes.json();
+          if (meData?.user?._id) {
+            clientId = meData.user._id;
+            localStorage.setItem('user', JSON.stringify(meData.user));
+          }
+        }
+      }
+
+      if (!clientId) {
+        alert('Unable to determine user. Please login and try again.');
+        return;
+      }
+
+      const token = localStorage.getItem('token');
+
+      const res = await fetch(`${API_BASE}/api/client/${clientId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        credentials: 'include',
+        body: JSON.stringify({ pets: finalPets })
+      });
+
+      const data = await res.json().catch(() => null);
+
+      if (res.ok && data?.success) {
+        // update local user cache if server returned updated client
+        if (data.client) {
+          localStorage.setItem('user', JSON.stringify(data.client));
+        }
+        alert('Pet information saved.');
+        navigate('/');
+      } else {
+        console.error('Save pets failed:', res.status, data);
+        alert(data?.message || 'Failed to save pet information.');
+      }
+    } catch (err) {
+      console.error('Error saving pets:', err);
+      alert('Network or server error while saving pet info.');
+    }
   };
 
   return (

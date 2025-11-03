@@ -74,7 +74,7 @@ const loginUser = async (req,res) => {
 const registerUser = async (req,res) => {
     //res.json({msg:"Register API Working"})
     try{
-        const {name, email, password, role} = req.body;
+        const {name, email, password, role, phone, address, pets} = req.body;
         if (!email || !password){
           return res.json({
             success:false,
@@ -104,20 +104,20 @@ const registerUser = async (req,res) => {
             name,
             email: email.toLowerCase(),
             password,
-            role: role || "client"
+            role: role || "client",
+            phone: phone || '',
+            address: address || '',
+            pets: Array.isArray(pets) ? pets : []
         })
 
         const user = await newUser.save()
-
+        const safeUser = await userModel.findById(user._id).select('-password -resetPasswordToken -resetPasswordExpire');
         const token = createToken(user._id.toString(), user.role)
-        
-        res.json({success:true,token, role: user.role})
-
+        res.json({ success:true, token, role: user.role, user:safeUser})
     } catch(error) {
         console.log(error);
         res.status(500).json({success:false,message:error.message})
     }
-
 }
 
 // Route for admin login

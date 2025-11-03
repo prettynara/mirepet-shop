@@ -71,7 +71,7 @@ const Navbar = () => {
       setUser(null);
       if (typeof setRole === 'function') setRole('guest');
       navigate('/');
-      toast.info('Logged out');
+      //toast.info('Logged out');
     };
     
     const handleSearchClick = () => {
