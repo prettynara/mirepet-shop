@@ -17,6 +17,12 @@ const loginUser = async (req,res) => {
         const {email, password} = req.body;
          console.log("Login attempt:", email, password);
 
+         if (!email || !password){
+          return res
+          .status(400)
+          .json({success:false, message:"Please provide email and password"})
+         }
+
         // ✅ 1️⃣ .env의 ADMIN 계정 로그인 확인
          if (email === process.env.ADMIN_EMAIL && password === process.env.ADMIN_PASSWORD) {
             let adminUser = await userModel.findOne({ email, role: "admin" });
@@ -31,9 +37,9 @@ const loginUser = async (req,res) => {
             token,
             role: "admin",
             name: "Administrator",
+            message: "Admin login success",
         });
         }
-            message: "Admin login success"
 
         // User Login
         const user = await userModel.findOne({email: email.toLowerCase()}).select('+password');
@@ -55,7 +61,7 @@ const loginUser = async (req,res) => {
         const token = createToken(user._id.toString(), user.role)
         
         // client / seller/ admin 구분
-        return res.json({success:true, token, role:user.role, name:user.name})
+        return res.json({success:true, token, role:user.role, name:user.name, message:"Login successful",})
         
     } catch (error) {
         console.log("Login Error:",error);
@@ -69,6 +75,12 @@ const registerUser = async (req,res) => {
     //res.json({msg:"Register API Working"})
     try{
         const {name, email, password, role} = req.body;
+        if (!email || !password){
+          return res.json({
+            success:false,
+            message:"Please enter all fields",
+          })
+        }
 
         //checking user already exists or not 
         const exists = await userModel.findOne({email: email.toLowerCase()})
@@ -199,4 +211,51 @@ const me = async (req, res) => {
   }
 }
 
-export { loginUser,registerUser,adminLogin, forgotPassword, resetPassword, me  }
+// Get client by id (public or authenticated)
+const getClient = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const client = await userModel.findById(id).select('-password -resetPasswordToken -resetPasswordExpire');
+    if (!client) return res.status(404).json({ success: false, message: 'Client not found' });
+    return res.json({ success: true, client });
+  } catch (err) {
+    console.error('getClient error:', err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Update client profile (owner or admin)
+const updateClient = async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log('updateClient called, params.id:', id);
+    console.log('updateClient auth user:', req.user);
+    console.log('updateClient body:', req.body);
+    
+    // require auth middleware to have attached req.user
+    if (!req.user) return res.status(401).json({ success: false, message: 'Not authenticated' });
+    if (req.user.id !== id && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Forbidden' });
+    }
+
+    const allowed = ['name', 'phone', 'address', 'pets'];
+    const updates = {};
+    for (const key of allowed) {
+      if (typeof req.body[key] !== 'undefined') updates[key] = req.body[key];
+    }
+
+    const updated = await userModel.findByIdAndUpdate(
+      id,
+      { $set: updates },
+      { new: true, runValidators: true }
+    ).select('-password -resetPasswordToken -resetPasswordExpire');
+    if (!updated) return res.status(404).json({ success: false, message: 'Client not found' });
+    console.log('updateClient success:', updated._id.toString());
+    return res.json({ success: true, message: 'Profile updated', client: updated });
+  } catch (err) {
+    console.error('updateClient error:', err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+export { loginUser, registerUser, adminLogin, forgotPassword, resetPassword, me, getClient, updateClient }

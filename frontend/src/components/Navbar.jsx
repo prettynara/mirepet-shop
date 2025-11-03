@@ -2,6 +2,8 @@ import React, { useState, useContext, useEffect } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { assets } from './../assets/assets';
 import { ShopContext } from '../context/ShopContext';
+import { useRole } from '../context/RoleContext'; 
+import { toast } from 'react-toastify';
 
 const Navbar = () => {
 
@@ -11,6 +13,8 @@ const Navbar = () => {
     const{getCartCount} = useContext(ShopContext);
     const navigate = useNavigate();
 
+    const { role, setRole } = useRole();
+
     //Bringing user information
     const [user, setUser] = useState(null);
     
@@ -18,7 +22,10 @@ const Navbar = () => {
       const fetchUser = async () => {
         try {
           const token = localStorage.getItem('token'); // 로그인 시 저장한 토큰
-          if (!token) return; // 로그인 안 된 경우 바로 종료
+          if (!token) { // 로그인 안 된 경우 바로 종료
+          setUser(null);
+          return;
+        }
 
           const res = await fetch('http://localhost:4000/api/me', {
             headers: {
@@ -42,7 +49,7 @@ const Navbar = () => {
       };
 
       fetchUser();
-}, []);
+}, [role]);
 
 
       {/*  useEffect(() => {
@@ -50,9 +57,21 @@ const Navbar = () => {
       }, []); */}
 
     const handleLogout = async () => {
-      await fetch('api/logout', {method: 'POST', credentials: 'include'});
-      setUser(null)
+      // use absolute or leading slash so Vite dev server proxies correctly
+      try {
+        await fetch('http://localhost:4000/api/logout', { method: 'POST', credentials: 'include' });
+      } catch (err) {
+        console.debug('logout endpoint absent or failed', err?.message || err);
+      }
+
+      // client-side cleanup
+      localStorage.removeItem('token');
+      localStorage.removeItem('role');
+      localStorage.removeItem('user');
+      setUser(null);
+      if (typeof setRole === 'function') setRole('guest');
       navigate('/');
+      toast.info('Logged out');
     };
     
     const handleSearchClick = () => {
@@ -62,7 +81,7 @@ const Navbar = () => {
         setFocusSearch(true);
     }
 
-  const clientName = user?.clientName;
+  const clientName = user?.name || null;
 
   return (
     // this is where i put the logo left up and home for right up

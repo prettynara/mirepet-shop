@@ -1,6 +1,14 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 
+const petSchema = new mongoose.Schema({
+  name: { type: String },
+  type: { type: String },
+  breed: { type: String },
+  dob: { type: Date },
+  photo: { type: String },
+}, {_id:false});
+
 const userSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
@@ -12,10 +20,14 @@ const userSchema = new mongoose.Schema(
       enum: ["guest", "client", "seller", "admin"],
       default: "guest",
     },
+    //new profile fields
+    phone: {type: String, default: ''},
+    address: {type: String, default: ''},
+    pets: {type: [petSchema], default: []},
     resetPasswordToken: { type: String },
     resetPasswordExpire: { type: Date },
   },
-  { timestamps: true }
+  { timestamps: true }  
 );
 
 userSchema.pre("save", async function (next) {

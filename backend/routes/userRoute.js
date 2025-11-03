@@ -1,5 +1,5 @@
 import express from 'express';
-import { loginUser,registerUser,adminLogin, forgotPassword, resetPassword, me } from '../controllers/userController.js';
+import { loginUser,registerUser,adminLogin, forgotPassword, resetPassword, me, getClient, updateClient } from '../controllers/userController.js';
 import authMiddleware from '../middleware/authMiddleware.js';
 
 const userRouter = express.Router();
@@ -14,5 +14,9 @@ userRouter.post('/reset-password', resetPassword);
 
 //current user
 userRouter.get('/me', authMiddleware, me);
+
+//client profile endpoints
+userRouter.get('/client/:id', authMiddleware, getClient);
+userRouter.post('/client/:id', authMiddleware, updateClient);
 
 export default userRouter; 

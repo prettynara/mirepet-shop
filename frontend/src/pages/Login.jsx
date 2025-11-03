@@ -70,21 +70,56 @@ const Login = () => {
         return;
       }
 
+      // ✅ 백엔드에서 받은 유저 정보 확인
+      console.log("✅ Login response:", data);
+
+      if (data.token) {
+        localStorage.setItem('token', data.token);
+      }
+
+      //try to use returned user; if not present, call /api/me
+      let currentUser = data.user || null;
+      if (!currentUser) {
+        try {
+          const meRes = await fetch('http://localhost:4000/api/me', {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json',
+              ...(data.token ? {Authorization: `Bearer ${data.token}`} : {})
+            },
+            credentials: 'include'
+          });
+          if (meRes.ok) {
+            const meData = await meRes.json();
+            currentUser = meData.user || null;
+          }
+        } catch (e) {
+          console.warn('no /api/me after login:', e);         
+        }
+      }
+
+      if (currentUser) {
+        localStorage.setItem('user', JSON.stringify(currentUser));
+      } else {
+        // ensure previous stale user is removed
+        localStorage.removeItem('user');
+      } 
+
       //API에서 받은 role 사용
-      const userRole = data.role || 'guest';
+      const userRole = data.role  || (currentUser && currentUser.role)|| 'guest';
       setRole(userRole);
       localStorage.setItem('role', userRole); //새로고침 후에도 유지
       // JWT 저장(선택, 새로고침 후 로그인 유지 가능)
-      localStorage.setItem('token', data.token);
 
       // role별 화면 이동
-      if (userRole === 'client') navigate('/Home');
-      else if (userRole === 'seller') navigate('/seller/dashboard');
-      else if (userRole === 'admin') navigate('/admin/dashboard');
-      else navigate('/');
-    } catch (err) {
-      console.error(err);
-      alert('Login failed');
+      console.log('navigating, userRole:', userRole);
+      if (userRole === 'client') navigate('/', {replace: true});
+      else if (userRole === 'seller') navigate('/seller/dashboard', {replace: true});
+      else if (userRole === 'admin') navigate('/admin/dashboard', {replace: true});
+      else navigate('/', {replace: true});
+    } catch (navErr) {
+      console.error('navigate failed, falling back to full redirect:', navErr);
+      // 강제 새로고침 리다이렉트(임시 안전망)
+      window.location.href = '/';
     }
   };
 
