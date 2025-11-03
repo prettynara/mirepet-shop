@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react'
 import { assets } from './../assets/assets';
 import { NavLink, Link, useNavigate } from 'react-router-dom';
+import { useRole } from '../context/RoleContext';
 
 
 const SellerNavbar = () => {
   const [visible, setVisible] = useState(false);
   const [user, setUser] = useState(null);
   const navigate = useNavigate();
+
+  const { setRole } = useRole();
   
     //Importing petshop name
     useEffect(() => {
@@ -20,9 +23,19 @@ const SellerNavbar = () => {
   }, []);
 
   const handleLogout = async () => {
-    await fetch('/api/logout', { method: 'POST', credentials: 'include' });
-    setUser(null);
-    navigate('/');
+     try {
+      await fetch('/api/logout', { method: 'POST', credentials: 'include' });
+    } catch (err) {
+      console.error('logout request failed', err);
+    } finally {
+      // client-side cleanup
+      localStorage.removeItem('token');
+      localStorage.removeItem('role');
+      if (typeof setRole === 'function') setRole('guest');
+      setUser(null);
+      setVisible(false);
+      navigate('/');
+    }
   };
 
   const petshopName = user?.petshopName || 'Seller';

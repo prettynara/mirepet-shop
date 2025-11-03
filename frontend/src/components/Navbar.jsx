@@ -18,6 +18,8 @@ const Navbar = () => {
       const fetchUser = async () => {
         try {
           const token = localStorage.getItem('token'); // 로그인 시 저장한 토큰
+          if (!token) return; // 로그인 안 된 경우 바로 종료
+
           const res = await fetch('http://localhost:4000/api/me', {
             headers: {
               'Content-Type': 'application/json',
@@ -27,8 +29,15 @@ const Navbar = () => {
           });
           const data = await res.json();
           console.log('me:', data);
+
+          if (res.ok) {
+            setUser(data.user || data);
+          } else{
+            setUser(null);
+          }
         } catch (error) {
           console.error('fetch user error', error);
+          setUser(null);
         }
       };
 

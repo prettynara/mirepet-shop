@@ -1,30 +1,37 @@
-import jwt from "jsonwebtoken";
+import jwt from 'jsonwebtoken';
+import User from '../models/userModel.js';
 
-// 인증 미들웨어
-const requireAuth = (req, res, next) => {
+const requireAuth = async (req, res, next) => {
   try {
-    // 헤더에서 토큰 가져오기
-    const authHeader = req.headers.authorization;
+    let token;
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return res.status(401).json({ success: false, message: "No token provided" });
+    // 1) Authorization: Bearer <token>
+    const authHeader = req.headers.authorization || req.headers.Authorization;
+    if (authHeader && typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
+      token = authHeader.split(' ')[1];
     }
 
-    const token = authHeader.split(" ")[1];
+    // 2) cookie (if your login sets an httpOnly cookie named 'token')
+    if (!token && req.cookies && req.cookies.token) {
+      token = req.cookies.token;
+    }
 
-    // 토큰 검증
+    if (!token) {
+      return res.status(401).json({ success: false, message: 'Not authorized - token missing' });
+    }
+
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    // decoded should have id field
+    const user = await User.findById(decoded.id).select('-password -resetPasswordToken -resetPasswordExpire');
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'Not authorized - user not found' });
+    }
 
-    // req.user에 id와 role 저장
-    req.user = {
-      id: decoded.id,
-      role: decoded.role
-    };
-
+    req.user = { id: user._id.toString(), role: user.role, email: user.email };
     next();
-  } catch (error) {
-    console.log(error);
-    return res.status(401).json({ success: false, message: "Invalid or expired token" });
+  } catch (err) {
+    console.error('authMiddleware error:', err.message);
+    return res.status(401).json({ success: false, message: 'Not authorized' });
   }
 };
 

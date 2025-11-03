@@ -19,15 +19,43 @@ const Login = () => {
   const onSubmitHandler = async (event) => {
     event.preventDefault();
 
-    const email = event.target[0].value;
-    const password = event.target[1].value;
+    const formData = { name, email, password, role };
 
     if (currentState === 'Sign Up') {
-      if (role === 'client') navigate('/customer-info');
-      else if (role === 'seller') navigate('/seller-info');
-      return;
-    }
+    try {
+      const res = await fetch('http://localhost:4000/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+        credentials: 'include'
+      });
 
+      const data = await res.json();
+
+      if (!data.success) {
+        alert(data.message || 'Registration failed');
+        return;
+      }
+
+      const userRole = data.role || role;
+
+      // 저장 성공 시 role과 token 저장
+      localStorage.setItem('role', userRole);
+      localStorage.setItem('token', data.token);
+      setRole(userRole);
+
+      // 회원가입 성공 후 페이지 이동
+      if (userRole === 'client') navigate('/customer-info');
+      else if (userRole === 'seller') navigate('/seller-info');
+      else navigate('/');
+    } catch (err) {
+      console.error(err);
+      alert('Registration failed');
+    }
+    return;
+  }
+
+    // Login
     try {
       const res = await fetch('http://localhost:4000/api/login', {
         method: 'POST',
@@ -35,6 +63,7 @@ const Login = () => {
         body: JSON.stringify({ email, password }),
         credentials: 'include'
       });
+
       const data = await res.json();
       if (!data.success) {
         alert(data.message);
@@ -45,7 +74,6 @@ const Login = () => {
       const userRole = data.role || 'guest';
       setRole(userRole);
       localStorage.setItem('role', userRole); //새로고침 후에도 유지
-
       // JWT 저장(선택, 새로고침 후 로그인 유지 가능)
       localStorage.setItem('token', data.token);
 
@@ -63,7 +91,7 @@ const Login = () => {
   const onForgotSubmit = async (e) => {
     e.preventDefault();
     if (!forgotEmail) {
-      setForgotMessage('write your email address.');
+      setForgotMessage('Please enteryour email address.');
       return;
     }
     setLoading(true);
@@ -77,18 +105,18 @@ const Login = () => {
       });
       
       let data = null;
-      try { data = await res.json(); } catch (err) { /* non-json response */ }
+      try { data = await res.json(); } catch { /* non-json response */ }
 
       if (res.ok && data?.success) {
-        setForgotMessage(data.message || 'reset link sent to your email.');
+        setForgotMessage(data.message || 'Reset link sent to your email.');
       } else if (data && !data.success) {
-        setForgotMessage(data.message || 'failed the request.');
+        setForgotMessage(data.message || 'Failed the the request.');
       } else {
-        setForgotMessage('no response.');
+        setForgotMessage('No response from server.');
       }
     } catch (err) {
       console.error(err);
-      setForgotMessage('network error.');
+      setForgotMessage('Network error.');
     } finally {
       setLoading(false);
     }
