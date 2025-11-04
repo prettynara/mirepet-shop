@@ -15,6 +15,6 @@ productRouter.post('/single', singleProduct);
 productRouter.get('/list', listProduct);
 
 productRouter.patch('/:id/hold', adminAuth, toggleHold);
-productRouter.delete('/:id', adminAuth, deleteProduct);
+productRouter.delete('/:id', requireAuth, deleteProduct);
 
 export default productRouter

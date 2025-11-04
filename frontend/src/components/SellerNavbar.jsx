@@ -3,6 +3,8 @@ import { assets } from './../assets/assets';
 import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { useRole } from '../context/RoleContext';
 
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+
 
 const SellerNavbar = () => {
   const [visible, setVisible] = useState(false);
@@ -12,15 +14,33 @@ const SellerNavbar = () => {
   const { setRole } = useRole();
   
     //Importing petshop name
-    useEffect(() => {
-    fetch('/api/me', { credentials: 'include' })
-      .then(res => res.json())
-      .then(data => {
-        if (data && data.petshopName) setUser(data);
-        else setUser(null);
-      })
-      .catch(() => setUser(null));
-  }, []);
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_BASE}/api/me`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? {Authorization: `Bearer ${token}`} : {})
+          },
+          credentials: 'include'
+        });
+        const data = await res.json().catch(() => null);
+        const u = data?.user || data;
+        if (u && u.petshopName) {
+          setUser(u);
+          // keep local cache in sync
+          try { localStorage.setItem('user', JSON.stringify(u)); } catch (e) {/* ignore */ }
+        } else {
+          setUser(null);
+        }
+      } catch(err) {
+        setUser(null);
+      }
+    };
+    load();
+}, []);
 
   const handleLogout = async () => {
      try {

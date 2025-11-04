@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 
-const SellerProfile = ({ sellerId }) => {
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
+
+const SellerProfile = ({ sellerId: propSellerId }) => {
+  const [sellerId, setSellerId] = useState(propSellerId || null);
   const [sellerData, setSellerData] = useState({
     name: "",
     owner: "",
@@ -10,16 +13,66 @@ const SellerProfile = ({ sellerId }) => {
     address: "",
     description: "",
     logo: "",
+    petshopName: "",
   });
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // MongoDB에서 seller 데이터 가져오기
+// get sellerId from localStorage or /api/me if not provided
   useEffect(() => {
-    const fetchSeller = async () => {
+    const init = async () => {
       try {
-        const res = await axios.get(`/api/sellers/${sellerId}`);
-        setSellerData(res.data);
+        if (propSellerId) {
+          setSellerId(propSellerId);
+          return;
+        }
+        const stored = JSON.parse(localStorage.getItem("user") || "null");
+        if (stored && stored._id) {
+          setSellerId(stored._id);
+          return;
+        }
+        const token = localStorage.getItem("token");
+        if (!token) {
+          setLoading(false);
+          return;
+        }
+        const meRes = await fetch(`${API_BASE}/api/me`, {
+          method: "GET",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          credentials: "include",
+        });
+        if (meRes.ok) {
+          const d = await meRes.json();
+          if (d?.user?._id) {
+            setSellerId(d.user._id);
+            localStorage.setItem("user", JSON.stringify(d.user));
+          }
+        }
+      } catch (err) {
+        console.debug("init sellerId failed", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    init();
+  }, [propSellerId]);
+
+  // fetch seller details once we have sellerId
+  useEffect(() => {
+    if (!sellerId) return;
+    const fetchSeller = async () => {
+      setLoading(true);
+      try {
+        const token = localStorage.getItem("token");
+        const res = await axios.get(`${API_BASE}/api/sellers/${sellerId}`, {
+          headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+          withCredentials: true,
+        });
+        if (res.data) {
+          // adapt shape if backend returns { seller } or direct object
+          const payload = res.data.seller || res.data;
+          setSellerData((prev) => ({ ...prev, ...payload }));
+        }
       } catch (error) {
         console.error("Failed to fetch seller data:", error);
       } finally {
@@ -36,12 +89,29 @@ const SellerProfile = ({ sellerId }) => {
 
   const handleSave = async (e) => {
     e.preventDefault();
+    if (!sellerId) {
+      alert("Seller ID is missing.");
+      return;
+    }
     try {
-      await axios.put(`/api/sellers/${sellerId}`, sellerData);
+      const token = localStorage.getItem("token");
+      const res = await axios.put(`${API_BASE}/api/sellers/${sellerId}`,
+        sellerData,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          withCredentials: true,
+        }
+      );
       setIsEditing(false);
       alert("Seller profile updated successfully!");
+      // update local cache
+      if (res.data?.seller) localStorage.setItem("user", JSON.stringify(res.data.seller));
     } catch (error) {
       console.error("Failed to save seller data:", error);
+      alert("Failed to save changes. Please try again.");
     }
   };
 
@@ -87,18 +157,20 @@ const SellerProfile = ({ sellerId }) => {
         {/* 폼 */}
         <form className="space-y-5" onSubmit={handleSave}>
           {[
-            { label: "Shop Name", name: "name" },
+            { label: "Shop Name", name: "petshopName" },
             { label: "Owner Name", name: "owner" },
             { label: "Phone", name: "phone" },
             { label: "Address", name: "address" },
+            { label: "Email", name: "email" },
           ].map((field, i) => (
             <div key={i}>
               <label className="text-gray-700 font-medium">{field.label}</label>
               <input
-                type="text"
+                type={field.name === "email" ? "email" : "text"}
                 name={field.name}
-                value={sellerData[field.name]}
-                disabled={!isEditing}
+                value={sellerData[field.name] || ""}
+                //email must never be editable
+                disabled={field.name === "email" ? true : !isEditing}
                 onChange={handleChange}
                 className={`w-full mt-1 px-4 py-2 rounded-lg border shadow-sm transition-all duration-200 ${
                   isEditing
@@ -109,60 +181,19 @@ const SellerProfile = ({ sellerId }) => {
             </div>
           ))}
 
-          {/* 이메일은 항상 비활성 */}
-          <div>
-            <label className="text-gray-700 font-medium">Email</label>
-            <input
-              type="email"
-              name="email"
-              value={sellerData.email}
-              disabled
-              className="w-full mt-1 px-4 py-2 border rounded-lg bg-gray-100 border-gray-200 cursor-not-allowed"
-            />
-          </div>
-
           <div>
             <label className="text-gray-700 font-medium">Description</label>
-            <textarea
-              name="description"
-              value={sellerData.description}
-              disabled={!isEditing}
-              onChange={handleChange}
-              rows="3"
-              className={`w-full mt-1 px-4 py-2 border rounded-lg shadow-sm transition-all duration-200 ${
-                isEditing
-                  ? "border-blue-400 focus:ring-2 focus:ring-blue-500 bg-white"
-                  : "bg-gray-100 border-gray-200 cursor-not-allowed"
-              }`}
-            />
+            <textarea name="description" value={sellerData.description || ""} disabled={!isEditing} onChange={handleChange} rows="3" className={`w-full mt-1 px-4 py-2 border rounded-lg shadow-sm transition-all duration-200 ${isEditing ? "border-blue-400 focus:ring-2 focus:ring-blue-500 bg-white" : "bg-gray-100 border-gray-200 cursor-not-allowed"}`} />
           </div>
 
-          {/* 버튼 */}
           <div className="flex justify-end gap-4 mt-8">
             {isEditing ? (
               <>
-                <button
-                  type="button"
-                  onClick={() => setIsEditing(false)}
-                  className="px-6 py-2 rounded-lg text-gray-600 bg-gray-200 hover:bg-gray-300 transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-6 py-2 rounded-lg text-white bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 shadow-sm"
-                >
-                  Save Changes
-                </button>
+                <button type="button" onClick={() => setIsEditing(false)} className="px-6 py-2 rounded-lg text-gray-600 bg-gray-200 hover:bg-gray-300 transition">Cancel</button>
+                <button type="submit" className="px-6 py-2 rounded-lg text-white bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 shadow-sm">Save Changes</button>
               </>
             ) : (
-              <button
-                type="button"
-                onClick={() => setIsEditing(true)}
-                className="px-6 py-2 rounded-lg text-white bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 shadow-sm"
-              >
-                Edit Profile
-              </button>
+              <button type="button" onClick={() => setIsEditing(true)} className="px-6 py-2 rounded-lg text-white bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 shadow-sm">Edit Profile</button>
             )}
           </div>
         </form>

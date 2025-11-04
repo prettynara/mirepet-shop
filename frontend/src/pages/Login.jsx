@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useRole } from '../context/RoleContext';
 
 const Login = () => {
-  const [currentState, setCurrentState] = useState('Sign Up');
+  const [currentState, setCurrentState] = useState('Login');
   const { role, setRole } = useRole(); // RoleContext에서 role 가져오기
   const navigate = useNavigate();
 

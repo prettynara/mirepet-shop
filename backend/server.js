@@ -5,6 +5,7 @@ import connectDB from './config/mongodb.js'
 import connectCloudinary from './config/cloudinary.js';
 import userRouter from './routes/userRoute.js';
 import productRouter from './routes/productRoute.js';
+import sellerRouter from './routes/sellerRoute.js';
 import { loginUser} from './controllers/userController.js';
 
 
@@ -32,8 +33,10 @@ app.use(express.urlencoded({ extended: true}))
 // API endpoints
 app.use('/api',userRouter)
 app.use('/api/product',productRouter)
+app.use('/api/sellers',sellerRouter)
 console.log("✅ userRouter mounted on /api");
 console.log("✅ productRouter mounted on /api/product");
+console.log("✅ sellerRouter mounted on /api/sellers");
 
 // Login Route
 app.post('/api/login', loginUser);

@@ -24,6 +24,13 @@ const userSchema = new mongoose.Schema(
     phone: {type: String, default: ''},
     address: {type: String, default: ''},
     pets: {type: [petSchema], default: []},
+    // seller profile fileds
+    petshopName: {type: String, trim: true, default: ''},
+    owner: {type: String, trim: true, default: ''},
+    phone: {type: String, trim: true, default: ''},
+    address: {type: String, trim: true, default: ''},
+    description: {type: String, trim: true, default: ''},
+    logo: {type: String, trim: true, default: ''},
     resetPasswordToken: { type: String },
     resetPasswordExpire: { type: Date },
   },

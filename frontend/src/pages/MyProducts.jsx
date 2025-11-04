@@ -2,6 +2,7 @@ import React, { useContext, useState, useEffect } from 'react';
 import { ShopContext } from '../context/ShopContext';
 import { useRole } from '../context/RoleContext';
 import ProductItem from '../components/ProductItem';
+import axios from 'axios';
 
 const MyProducts = () => {
   const { products, currency, currentSeller } = useContext(ShopContext);
@@ -23,23 +24,97 @@ const MyProducts = () => {
   };
   const [formProduct, setFormProduct] = useState(initialFormState);
 
-  const categories = [
-    'Food', 'Treat', 'Toy', 'Health Care', 'Cleaning Supplies', 'Accessories', 'Comfort', 'Others'
-  ];
-  const subCategories = ['Dog', 'Cat', 'Bird', 'Fish', 'Others'];
+  const base = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 
-  // 현재 셀러 상품만 필터링
+  // fetch latest products from backend and filter by current seller
+  const fetchMyProducts = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const config = token ? { headers: { Authorization: `Bearer ${token}` }, withCredentials: true } : { withCredentials: true };
+      const res = await axios.get(`${base}/api/product/list`, config);
+      const all = Array.isArray(res.data.products) ? res.data.products : [];
+      const filtered = all.filter(p => String(p.seller) === String(currentSeller));
+      setMyProducts(filtered);
+    } catch (err) {
+      console.error('fetchMyProducts error', err);
+      // fallback to context products if backend fails
+      setMyProducts(products.filter(p => p.seller === currentSeller));
+    }
+  }
+
   useEffect(() => {
     if (role !== 'seller') return;
-    const filtered = products.filter(p => p.seller === currentSeller);
-    setMyProducts(filtered);
-  }, [products, role, currentSeller]);
+    fetchMyProducts();
+  }, [role, currentSeller, products]);
 
-  const handleDelete = (id) => {
-    setMyProducts(prev => prev.filter(p => p._id !== id));
+  useEffect(() => {
+    fetchMyProducts();
+  }, [products]);
+
+  const handleDelete = async (id) => {
+    if (!confirm('Delete this product?')) return;
+    try {
+      const token = localStorage.getItem('token'); 
+      const config = token ? { headers: { Authorization: `Bearer ${token}` }, withCredentials: true } : { withCredentials: true };
+      await axios.delete(`${base}/api/product/${id}`, config);
+      // refresh UI : update global products and seller list
+      if (typeof fetchProducts === 'function') await fetchProducts();
+      await fetchMyProducts();
+    } catch (err) {
+      console.error('Delete product error', err.response?.data || err.message);
+      alert(err.response?.data?.message || 'Failed to delete product.');
+    }
   };
 
-  const handleEdit = (product) => {
+  const handleFormSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem('token');
+      const config = token ? { headers: { Authorization: `Bearer ${token}` }, withCredentials: true } : { withCredentials: true };
+    
+     // build FormData for images + fields
+      const fd = new FormData();
+      fd.append('name', formProduct.name);
+      fd.append('brand', formProduct.brand);
+      fd.append('description', formProduct.description);
+      fd.append('category', formProduct.category);
+      fd.append('subCategory', formProduct.subCategory);
+      fd.append('bestseller', 'false');
+      // options as JSON string (single option from price fields)
+      const options = [{ weight: '', price: formProduct.price, sale_price: formProduct.sale_price, special_price: formProduct.special_price }];
+      fd.append('options', JSON.stringify(options));
+
+      // attach files
+      formProduct.image.forEach((file, idx) => {
+        fd.append(`image${idx+1}`, file);
+      });
+
+      // POST to backend add endpoint
+      await axios.post(`${base}/api/product/add`, fd, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        withCredentials: true
+      });
+
+      // reset & refresh: update global products so Products/Products update
+      setFormProduct(initialFormState);
+      setShowForm(false);
+      if (typeof fetchProducts === 'function') await fetchProducts();
+      await fetchMyProducts();
+    } catch (err) {
+      console.error('save product error', err.response?.data || err.message);
+      alert('Failed to save product');
+    }
+  };
+
+  const handleImageChange = (e) => {
+    const files = Array.from(e.target.files).slice(0, 4);
+    setFormProduct(prev => ({ ...prev, image: files }));
+  };
+
+  const handleEditClick = (product) => {
     setEditingId(product._id);
     setFormProduct({
       name: product.name,
@@ -50,68 +125,9 @@ const MyProducts = () => {
       price: product.options[0]?.price || 0,
       sale_price: product.options[0]?.sale_price || 0,
       special_price: product.options[0]?.special_price || false,
-      image: [], // 새로 업로드할 이미지
+      image: [], // new uploads
     });
     setShowForm(true);
-  };
-
-  const handleFormSubmit = (e) => {
-    e.preventDefault();
-
-    const imageUrls = formProduct.image.length
-      ? formProduct.image.map(file => URL.createObjectURL(file))
-      : [];
-
-    if (editingId) {
-      setMyProducts(prev =>
-        prev.map(p => p._id === editingId ? {
-          ...p,
-          name: formProduct.name,
-          brand: formProduct.brand,
-          description: formProduct.description,
-          category: formProduct.category,
-          subCategory: formProduct.subCategory,
-          image: imageUrls.length ? imageUrls : p.image,
-          options: [{
-            weight: '',
-            price: formProduct.price,
-            sale_price: formProduct.sale_price,
-            special_price: formProduct.special_price
-          }]
-        } : p)
-      );
-    } else {
-      const id = `new-${Date.now()}`;
-      setMyProducts(prev => [
-        ...prev,
-        {
-          _id: id,
-          seller: currentSeller, // 로그인한 셀러 자동 적용
-          name: formProduct.name,
-          brand: formProduct.brand,
-          description: formProduct.description,
-          category: formProduct.category,
-          subCategory: formProduct.subCategory,
-          image: imageUrls,
-          options: [{
-            weight: '',
-            price: formProduct.price,
-            sale_price: formProduct.sale_price,
-            special_price: formProduct.special_price
-          }]
-        }
-      ]);
-    }
-
-    // 초기화
-    setEditingId(null);
-    setFormProduct(initialFormState);
-    setShowForm(false);
-  };
-
-  const handleImageChange = (e) => {
-    const files = Array.from(e.target.files).slice(0, 4);
-    setFormProduct(prev => ({ ...prev, image: files }));
   };
 
   return (
@@ -127,33 +143,33 @@ const MyProducts = () => {
 
       {showForm && (
         <form onSubmit={handleFormSubmit} className="flex flex-col gap-3 mb-6 p-4 border rounded-lg bg-gray-50">
-          <input type="text" placeholder="Product Name" value={formProduct.name} onChange={(e) => setFormProduct({ ...formProduct, name: e.target.value })} className="border p-2 rounded"/>
-          <input type="text" placeholder="Brand" value={formProduct.brand} onChange={(e) => setFormProduct({ ...formProduct, brand: e.target.value })} className="border p-2 rounded"/>
-          <textarea placeholder="Description" value={formProduct.description} onChange={(e) => setFormProduct({ ...formProduct, description: e.target.value })} className="border p-2 rounded"/>
+          <input type="text" placeholder="Product Name" value={formProduct.name} onChange={(e) => setFormProduct({ ...formProduct, name: e.target.value })} className="border p-2 rounded" required />
+          <input type="text" placeholder="Brand" value={formProduct.brand} onChange={(e) => setFormProduct({ ...formProduct, brand: e.target.value })} className="border p-2 rounded" />
+          <textarea placeholder="Description" value={formProduct.description} onChange={(e) => setFormProduct({ ...formProduct, description: e.target.value })} className="border p-2 rounded" required />
           
-          <select value={formProduct.category} onChange={(e) => setFormProduct({ ...formProduct, category: e.target.value })} className="border p-2 rounded">
+          <select value={formProduct.category} onChange={(e) => setFormProduct({ ...formProduct, category: e.target.value })} className="border p-2 rounded" required>
             <option value="">Select Category</option>
-            {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+            <option>Food</option><option>Treat</option><option>Toy</option><option>Health Care</option><option>Cleaning Supplies</option><option>Accessories</option><option>Comfort</option><option>Others</option>
           </select>
 
-          <select value={formProduct.subCategory} onChange={(e) => setFormProduct({ ...formProduct, subCategory: e.target.value })} className="border p-2 rounded">
+          <select value={formProduct.subCategory} onChange={(e) => setFormProduct({ ...formProduct, subCategory: e.target.value })} className="border p-2 rounded" required>
             <option value="">Select SubCategory</option>
-            {subCategories.map(sub => <option key={sub} value={sub}>{sub}</option>)}
+            <option>Dog</option><option>Cat</option><option>Bird</option><option>Fish</option><option>Others</option>
           </select>
 
-          <input type="number" placeholder="Price" value={formProduct.price} onChange={(e) => setFormProduct({ ...formProduct, price: Number(e.target.value) })} className="border p-2 rounded"/>
+          <input type="number" placeholder="Price" value={formProduct.price} onChange={(e) => setFormProduct({ ...formProduct, price: Number(e.target.value) })} className="border p-2 rounded" required />
           <div className="flex items-center gap-2">
-            <input type="number" placeholder="Sale Price" value={formProduct.sale_price} onChange={(e) => setFormProduct({ ...formProduct, sale_price: Number(e.target.value) })} className="border p-2 rounded"/>
+            <input type="number" placeholder="Sale Price" value={formProduct.sale_price} onChange={(e) => setFormProduct({ ...formProduct, sale_price: Number(e.target.value) })} className="border p-2 rounded" />
             <label className="flex items-center gap-1">
               <input type="checkbox" checked={formProduct.special_price} onChange={(e) => setFormProduct({ ...formProduct, special_price: e.target.checked })}/>
               Special Price
             </label>
           </div>
 
-          <input type="file" accept="image/*" multiple onChange={handleImageChange} className="border p-2 rounded"/>
+          <input type="file" accept="image/*" multiple onChange={handleImageChange} className="border p-2 rounded" />
           <div className="flex gap-2 mt-2">
             {formProduct.image.map((file, idx) => (
-              <img key={idx} src={URL.createObjectURL(file)} alt="preview" className="w-20 h-20 object-cover rounded"/>
+              <img key={idx} src={URL.createObjectURL(file)} alt="preview" className="w-20 h-20 object-cover rounded" />
             ))}
           </div>
 
@@ -164,9 +180,9 @@ const MyProducts = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
         {myProducts.map(p => (
           <div key={p._id} className="relative bg-white shadow-lg rounded-2xl overflow-hidden hover:shadow-2xl transition-shadow">
-            <ProductItem id={p._id} image={p.image} name={p.name} seller={p.seller} option={p.options[0]} />
+            <ProductItem id={p._id} image={p.image} name={p.name} seller={p.seller} sellerName={p.sellerName} sellerLogo={p.sellerLogo} option={p.options?.[0]} />
             <div className="absolute top-2 right-2 flex gap-2">
-              <button onClick={() => handleEdit(p)} className="bg-yellow-400 hover:bg-yellow-500 px-2 py-1 rounded text-white shadow">Edit</button>
+              <button onClick={() => handleEditClick(p)} className="bg-yellow-400 hover:bg-yellow-500 px-2 py-1 rounded text-white shadow">Edit</button>
               <button onClick={() => handleDelete(p._id)} className="bg-red-500 hover:bg-red-600 px-2 py-1 rounded text-white shadow">Delete</button>
             </div>
           </div>

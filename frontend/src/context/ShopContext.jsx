@@ -1,130 +1,155 @@
-import { createContext, useState } from "react";
-import { products } from "../assets/assets";
+import React, { createContext, useState, useEffect } from "react";
+import { products as initialProducts } from "../assets/assets";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
 export const ShopContext = createContext();
 
-const ShopContextProvider = (props) => {
+export const ShopProvider = ({ children }) => {
+  const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
+  const navigate = useNavigate();
 
-    const currency = 'TND';
-    const delivery_fee = 10;
-    const weight = 'kg';
-    const [search, setSearch] = useState('');
-    const [showSearch, setShowSearch] = useState(false);    
-    const [cartItems, setCartItems] = useState({});
-    const navigate = useNavigate();
-    const [currentSeller, setCurrentSeller] =useState('Animax');
+  // products list (from backend when available)
+  const [products, setProducts] = useState([]);
+  const [search, setSearch] = useState("");
+  const [showSearch, setShowSearch] = useState(false);
+  const [cartItems, setCartItems] = useState({});
+  const [currentSeller, setCurrentSeller] = useState("Animax");
+  const [orders, setOrders] = useState([]);
 
-    const addToCart = async (itemId, option) => {
+  const currency = "TND";
+  const delivery_fee = 10;
+  const weight = "kg";
 
-        let cartData = structuredClone(cartItems);
-
-        // options를 문자열 key로 변환
-        const optionKey = option.weight || option.quantity; // weight나 quantity로 구분
-
-        if (cartData[itemId]) {
-            if (cartData[itemId][optionKey]) {
-                cartData[itemId][optionKey] += 1;
-            }
-            else{
-                cartData[itemId][optionKey] = 1;
-            }
-        }
-        else {
-            cartData[itemId] = {};
-            cartData[itemId][optionKey] = 1;
-        }
-        setCartItems(cartData);
-
+  // Fetch latest products from backend; fallback to bundled assets
+  const fetchProducts = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const config = token
+        ? { headers: { Authorization: `Bearer ${token}` }, withCredentials: true }
+        : { withCredentials: true };
+      const res = await axios.get(`${API_BASE}/api/product/list`, config);
+      const list = Array.isArray(res.data?.products) ? res.data.products : [];
+      if (list.length) setProducts(list);
+      else setProducts(initialProducts || []);
+    } catch (err) {
+      console.error("fetchProducts error", err);
+      // fallback to bundled assets
+      setProducts(initialProducts || []);
     }
+  };
 
-    const getCartCount = () => {
-        let totalCount = 0;
-        for(const items in cartItems){
-            for(const item in cartItems[items]){
-                try {
-                    if (cartItems[items][item] > 0 ) {
-                        totalCount += cartItems[items][item];
-                    }
-                } catch (error) {
-                }
-            }
-        }
-        return totalCount;
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  const addToCart = async (itemId, option) => {
+    const optionKey = option?.weight || option?.quantity;
+    const cartData = structuredClone(cartItems);
+    if (!cartData[itemId]) cartData[itemId] = {};
+    cartData[itemId][optionKey] = (cartData[itemId][optionKey] || 0) + 1;
+    setCartItems(cartData);
+    try { localStorage.setItem("cart", JSON.stringify(cartData)); } catch (e) {}
+  };
+
+  const getCartCount = () => {
+    let totalCount = 0;
+    for (const productId in cartItems) {
+      for (const opt in cartItems[productId]) {
+        const qty = cartItems[productId][opt];
+        if (typeof qty === "number" && qty > 0) totalCount += qty;
+      }
     }
+    return totalCount;
+  };
 
-    {/*
-    useEffect(() => {
-        console.log(cartItems);
-    },[cartItems])
-    */}
+  const updateQuantity = async (itemId, option, quantity) => {
+    const cartData = structuredClone(cartItems);
+    if (!cartData[itemId]) cartData[itemId] = {};
+    cartData[itemId][option] = quantity;
+    setCartItems(cartData);
+    try { localStorage.setItem("cart", JSON.stringify(cartData)); } catch (e) {}
+  };
 
-    const updateQuantity = async (itemId, option, quantity) => {
+  const clearCart = () => {
+    setCartItems({});
+    try {
+      localStorage.removeItem("cart");
+      localStorage.removeItem("cartItems");
+    } catch (e) {}
+  };
 
-            let cartData = structuredClone(cartItems);
-
-            cartData[itemId][option] = quantity;
-
-            setCartItems(cartData);
+  const getCartAmount = () => {
+    let totalAmount = 0;
+    for (const itemId in cartItems) {
+      const itemInfo = products.find((p) => p._id === itemId) || initialProducts.find((p) => p._id === itemId);
+      if (!itemInfo) continue;
+      for (const optionKey in cartItems[itemId]) {
+        const quantity = cartItems[itemId][optionKey];
+        if (quantity <= 0) continue;
+        const option = itemInfo.options?.find((o) => o.weight === optionKey || o.quantity === optionKey) || {};
+        const price = option?.sale_price && option.sale_price < option.price ? option.sale_price : option?.price || 0;
+        totalAmount += price * quantity;
+      }
     }
+    return totalAmount;
+  };
 
-    const getCartAmount =  () => {
-        let totalAmount = 0;
-        
-        for(const itemId in cartItems){
-            let itemInfo = products.find((product)=> product._id === itemId);
-            if (!itemInfo) continue;
-            
-            for(const optionKey in cartItems[itemId]){
-                const quantity = cartItems[itemId][optionKey];
-                if (quantity > 0) {
-                    // 옵션 찾기
-                    const option = itemInfo.options?.find(
-                    o => o.weight === optionKey || o.quantity === optionKey
-                );
+  // Orders
+  const placeOrder = (orderData) => {
+    setOrders((prev) => [{ ...orderData, status: "pending" }, ...prev]);
+  };
 
-                // 옵션 가격: sale_price가 있으면 사용, 없으면 기본 price
-                const price = option?.sale_price && option.sale_price < option.price ? option.sale_price : option?.price || 0;
+  const updateOrderStatus = (orderId, status) => {
+    setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status } : o)));
+  };
 
-                totalAmount += price * quantity;
-                }
-            }
-        }
-        return totalAmount;
-    }
+  // hydrate cart from localStorage on mount
+  useEffect(() => {
+    try {
+      const c = JSON.parse(localStorage.getItem("cart") || "null");
+      if (c && typeof c === "object") setCartItems(c);
+    } catch (e) {}
+    try {
+      const ord = JSON.parse(localStorage.getItem("orders") || "null");
+      if (Array.isArray(ord)) setOrders(ord);
+    } catch (e) {}
+  }, []);
 
-    const [ orders, setOrders] = useState([]);
+  // persist orders to localStorage when they change
+  useEffect(() => {
+    try {
+      localStorage.setItem("orders", JSON.stringify(orders));
+    } catch (e) {}
+  }, [orders]);
 
-    //주문 추가
-    const placeOrder = (orderData) => {
-        setOrders(prev => [... prev,{...orderData, status: "pending"}]);
-    };
+  const value = {
+    products,
+    setProducts,
+    fetchProducts,
+    currency,
+    delivery_fee,
+    weight,
+    search,
+    setSearch,
+    showSearch,
+    setShowSearch,
+    cartItems,
+    addToCart,
+    getCartCount,
+    updateQuantity,
+    clearCart,
+    getCartAmount,
+    navigate,
+    currentSeller,
+    setCurrentSeller,
+    orders,
+    setOrders,
+    placeOrder,
+    updateOrderStatus,
+  };
 
-    //주문 상태 업데이트
-    const updateOrderStatus = (orderId, status) => {
-        setOrders(prev =>
-            prev.map(o => o.id === orderId ? {...o, status} : o)
-        );
-    };
+  return <ShopContext.Provider value={value}>{children}</ShopContext.Provider>;
+};
 
-    const value = {
-        products,
-        currency,
-        delivery_fee,
-        weight,
-        search, setSearch,showSearch,setShowSearch,
-        cartItems, addToCart,
-        getCartCount, updateQuantity,
-        getCartAmount, navigate,
-        currentSeller, setCurrentSeller,
-        orders, setOrders, placeOrder, updateOrderStatus
-    }
-  
-    return (
-        <ShopContext.Provider value={value}>
-            {props.children}
-        </ShopContext.Provider>
-    )
-}
-
-export default ShopContextProvider;
+export default ShopProvider;

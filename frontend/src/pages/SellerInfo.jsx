@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+
 const SellerInfo = () => {
   const [shopInfo, setShopInfo] = useState({
     shopName: '',
@@ -9,6 +11,7 @@ const SellerInfo = () => {
     images: [],
   });
   const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);  
   const navigate = useNavigate();
 
   const validatePhone = (phone) => {
@@ -16,16 +19,109 @@ const SellerInfo = () => {
     return regex.test(phone);
   };
 
-  const onSubmitHandler = (e) => {
+  const fileToBase64 = (file) =>
+    new Promise((res, rej) => {
+      if (!file) return res(null);
+      const reader = new FileReader();
+      reader.onload = () => res(reader.result);
+      reader.onerror = (e) => rej(e);
+      reader.readAsDataURL(file);
+    });  
+
+  const onSubmitHandler = async (e) => {
     e.preventDefault();
 
     if (!validatePhone(shopInfo.phone)) {
-      setError('전화번호는 "+216"으로 시작하고 8자리 숫자를 포함해야 합니다.');
+      setError('Number should start with +216 and have 8 digits.');
       return;
     }
 
-    console.log('셀러 추가정보:', shopInfo);
-    navigate('/myproducts');
+    setSaving(true);
+    setError('');
+
+    try {
+      // determine current user id and token
+      let userId = null;
+      try {
+        const stored = JSON.parse(localStorage.getItem('user') || 'null');
+        if (stored && stored._id) userId = stored._id;
+      } catch (err) { /* ignore */ }
+
+      // fallback to /api/me if no user in localStorage
+      if (!userId) {
+        const token = localStorage.getItem('token');
+        if (token) {
+          const meRes = await fetch(`${API_BASE}/api/me`, {
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            credentials: 'include'
+          });
+          if (meRes.ok) {
+            const meData = await meRes.json();
+            const u = meData?.user || meData;
+            if (u?._id) {
+              userId = u._id;
+              localStorage.setItem('user', JSON.stringify(u));
+            }
+          } else {
+            throw new Error('Not authenticated');
+          }
+        }
+      }
+
+      if (!userId) {
+        setError('login is required to perform this action.');
+        setSaving(false);
+        navigate('/login');
+        return;
+      }
+
+      const token = localStorage.getItem('token');
+
+      // prepare payload: map fields to backend schema
+      const payload = {
+        petshopName: shopInfo.shopName || '',
+        address: shopInfo.location || '',
+        phone: shopInfo.phone || '',
+      };
+
+      // include first image as data URL (simple approach)
+      if (shopInfo.images && shopInfo.images.length > 0) {
+        const base64 = await fileToBase64(shopInfo.images[0]);
+        if (base64) payload.logo = base64;
+      }
+
+      const res = await fetch(`${API_BASE}/api/sellers/${userId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        credentials: 'include',
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        console.error('Save failed:', res.status, err);
+        setError(err?.message || 'failed to save in ther sever.');
+        setSaving(false);
+        return;
+      }
+
+      const data = await res.json().catch(() => null);
+      // update local cache if server returned updated user
+      if (data?.seller) {
+        try { localStorage.setItem('user', JSON.stringify(data.seller)); } catch (e) { /* ignore */ }
+      }
+
+      // success -> navigate to seller profile or myproducts
+      navigate('/seller-profile');
+    } catch (err) {
+      console.error('SellerInfo submit error:', err);
+      setError(err.message || '네트워크 오류가 발생했습니다.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleImageChange = (e) => {
