@@ -2,9 +2,12 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ProductsTitle from "../components/ProductsTitle";
 import { sellers as initialSellers} from '../assets/assets';
+import { useRole } from '../context/RoleContext';
 
-const Sellers = ({ userRole = "admin" }) => {
+const Sellers = ({ userRole }) => {
   const [filteredSellers, setFilteredSellers] = useState(initialSellers);
+  const { role: ctxRole } = useRole();
+  const effectiveRole = userRole || ctxRole || "guest";
   const [search, setSearch] = useState("");
   const [sortType, setSortType] = useState("name");
   const navigate = useNavigate();
@@ -65,7 +68,7 @@ const Sellers = ({ userRole = "admin" }) => {
       filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     // Client/Guest는 보류 숨기기
-    if (userRole !== "admin") {
+    if (effectiveRole !== "admin") {
       filtered = filtered.filter((s) => !s.isOnHold);
     }
 
@@ -102,7 +105,7 @@ const Sellers = ({ userRole = "admin" }) => {
             onClick={() => handleClientClick(seller._id)}
             className="relative cursor-pointer bg-white border border-blue-100 shadow-md rounded-2xl hover:shadow-lg hover:-translate-y-1 transition-all duration-200 overflow-hidden"
           >
-            {userRole === "admin" && (
+            {effectiveRole === "admin" && (
               <div className="absolute top-3 right-3 flex gap-2 z-10">
                 <button
                   onClick={(e) => toggleHold(e, seller._id)}
