@@ -67,7 +67,7 @@ const ProductItem = ({
             ) : (
               <div className="w-6 h-6 rounded-full bg-gray-200" />
             )}
-            <span className="text-xs text-gray-500">{displaySellerName}</span>
+            <span className="text-sm font-semibold text-gray-700 truncate">{displaySellerName}</span>
           </div>
         </div>
       </div>

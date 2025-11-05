@@ -1,16 +1,39 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import ProductsTitle from "../components/ProductsTitle";
 import { sellers as initialSellers} from '../assets/assets';
 import { useRole } from '../context/RoleContext';
+import axios from 'axios';
+import { Link } from "react-router-dom";
+
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 
 const Sellers = ({ userRole }) => {
+  const [allSellers, setAllSellers] = useState([]);
   const [filteredSellers, setFilteredSellers] = useState(initialSellers);
   const { role: ctxRole } = useRole();
   const effectiveRole = userRole || ctxRole || "guest";
   const [search, setSearch] = useState("");
   const [sortType, setSortType] = useState("name");
   const navigate = useNavigate();
+
+    useEffect(() => {
+    fetchSellers();
+    // eslint-disable-next-line
+  }, []);
+
+  const fetchSellers = async () => {
+    try {
+      const res = await axios.get(`${API_BASE}/api/sellers`);
+      const sellers = res.data?.sellers || [];
+      setAllSellers(sellers);
+      setFilteredSellers(sellers);
+    } catch (err) {
+      console.error("Failed to fetch sellers:", err);
+      setAllSellers([]);
+      setFilteredSellers([]);
+    }
+  };
 
   const handleSearch = (e) => {
     const value = e.target.value.toLowerCase();
@@ -55,7 +78,10 @@ const Sellers = ({ userRole }) => {
    }
  };
 
- const handleClientClick = (id) => navigate(`seller-detail/${id}`);
+ const handleClientClick = (id) => {
+  console.log('navigate to seller-details:', `/seller-detail/${id}`);
+  navigate(`/seller-detail/${id}`, {replace: false});
+ };
 
  // 검색+정렬+보류 필터
   const filterAndSetSellers = (searchValue, sort) => {
@@ -100,10 +126,10 @@ const Sellers = ({ userRole }) => {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6 px-6">
         {filteredSellers.map((seller) => (
-          <div
+          <Link
             key={seller._id}
-            onClick={() => handleClientClick(seller._id)}
-            className="relative cursor-pointer bg-white border border-blue-100 shadow-md rounded-2xl hover:shadow-lg hover:-translate-y-1 transition-all duration-200 overflow-hidden"
+            to={`/seller-detail/${seller._id}`}
+            className="relative block cursor-pointer bg-white border border-blue-100 shadow-md rounded-2xl hover:shadow-lg hover:-translate-y-1 transition-all duration-200 overflow-hidden"
           >
             {effectiveRole === "admin" && (
               <div className="absolute top-3 right-3 flex gap-2 z-10">
@@ -155,7 +181,7 @@ const Sellers = ({ userRole }) => {
                 {seller.description}
               </p>
             </div>
-          </div>
+          </Link>
         ))}
       </div>
 

@@ -1,5 +1,19 @@
 import userModel from "../models/userModel.js";
 
+const getSellers = async (req, res) => {
+  try {
+    // only users with role 'seller'
+    const sellers = await userModel
+      .find({ role: "seller" })
+      .select("-password -resetPasswordToken -resetPasswordExpire")
+      .lean();
+    return res.json({ success: true, sellers });
+  } catch (err) {
+    console.error("getSellers error:", err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 const getSeller = async (req, res) => {
   try {
     const { id } = req.params;
@@ -34,4 +48,4 @@ const updateSeller = async (req, res) => {
   }
 };
 
-export { getSeller, updateSeller };
+export { getSellers, getSeller, updateSeller };

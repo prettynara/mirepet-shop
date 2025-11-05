@@ -184,8 +184,16 @@ const Products = () => {
           {
             filterProducts.map((item)=>(
               <div key={item._id} className="relative">
-                <ProductItem name={item.name} id={item._id} image={item.image} seller={item.seller} option={item.options?.[0]} />
-             
+                <ProductItem
+                  name={item.name}
+                  id={item._id}
+                  image={item.image}
+                  seller={item.seller}
+                  sellerName={item.sellerName}
+                  sellerLogo={item.sellerLogo}
+                  option={item.options?.[0]}
+                />
+                
                 {userRole === "admin" && (
                   <div className="absolute top-2 right-2 flex flex-col gap-2">
                     <button onClick={()=>handleHold(item._id)} className="bg-yellow-500 text-white px-2 py-1 rounded shadow hover:bg-yellow-600">

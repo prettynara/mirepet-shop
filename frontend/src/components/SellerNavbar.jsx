@@ -72,12 +72,13 @@ const SellerNavbar = () => {
   
           {/* Desktop Menu */}
           <ul className="hidden sm:flex gap-8 text-xl text-gray-700">
-            {["MY PRODUCTS", "ORDERS", "ALL PRODUCTS", "ABOUT", "CONTACT"].map((item) => {
+            {["MY PRODUCTS", "ORDERS", "ALL PRODUCTS", "SELLERS", "ABOUT", "CONTACT"].map((item) => {
               let path = "";
   
               if (item === "MY PRODUCTS") path = "/myproducts";
               else if (item === "ORDERS") path = "/myorders";
               else if (item === "ALL PRODUCTS") path = "/products";
+              else if (item === "SELLERS") path = "/seller-list";
               else if (item === "ABOUT") path = "/about";
               else if (item === "CONTACT") path = "/contact";
               

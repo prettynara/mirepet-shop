@@ -1,8 +1,12 @@
+// ...existing code...
 import React, { useContext, useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { ShopContext } from '../context/ShopContext';
 import { assets } from './../assets/assets';
 import SimilarProducts from '../components/SimilarProducts';
+import axios from 'axios';
+
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 
 const Product = () => {
   const { productId } = useParams();
@@ -12,22 +16,53 @@ const Product = () => {
   const [selectedOption, setSelectedOption] = useState(null);
 
   const fetchProductData = async () => {
-    products.map((item) => {
-      if (item._id === productId) {
-        setProductData(item);
-        setImage(item.image[0]);
-        // 옵션이 있다면 첫 번째 옵션 선택
-        if (item.options && item.options.length > 0) {
-          setSelectedOption(item.options[0]);
-        }
-        return null;
+    // try to find in context first
+    const found = products.find((item) => item._id === productId);
+    if (found) {
+      setProductData(found);
+      setImage(found.image?.[0] || '');
+      if (found.options && found.options.length > 0) setSelectedOption(found.options[0]);
+      return;
+    }
+    // fallback: fetch single product from backend
+    try {
+      const res = await axios.get(`${API_BASE}/api/product/${productId}`);
+      if (res.data?.product) {
+        setProductData(res.data.product);
+        setImage(res.data.product.image?.[0] || '');
+        if (res.data.product.options && res.data.product.options.length > 0) setSelectedOption(res.data.product.options[0]);
       }
-    })
+    } catch (err) {
+      console.error('Failed to fetch product:', err);
+    }
   }
+
+  // if product has no sellerName/logo, fetch seller info
+  useEffect(() => {
+    if (!productData) return;
+    const needSellerInfo = !productData.sellerName || !productData.sellerLogo;
+    if (!needSellerInfo) return;
+
+    const fetchSeller = async () => {
+      try {
+        const sid = productData.seller;
+        if (!sid) return;
+        const res = await axios.get(`${API_BASE}/api/sellers/${sid}`);
+        const payload = res.data?.seller || res.data;
+        if (payload) {
+          setProductData(prev => ({ ...prev, sellerName: payload.petshopName || prev.sellerName || '', sellerLogo: payload.logo || prev.sellerLogo || '' }));
+        }
+      } catch (err) {
+        console.debug('fetch seller info failed', err);
+      }
+    };
+    fetchSeller();
+  }, [productData]);
 
   useEffect(() => {
     fetchProductData();
-  }, [productId, products])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [productId, products]);
 
   if (!productData) return <div className="opacity-0"></div>;
 
@@ -44,19 +79,21 @@ const Product = () => {
                 onClick={() => setImage(item)}
                 src={item}
                 key={index}
-                className='w-[24%] sm:w-full sm:mb-3 flex-shrink-0 cursor-pointer'
+                className='w-[24%] sm:w-full sm:mb-3 flex-shrink-0 cursor-pointer object-contain'
                 alt=""
               />
             ))}
           </div>
-          <div className='w-full sm:w-[80%]'>
-            <img className='w-full h-auto' src={image} alt="" />
+          <div className='w-full sm:w-[80%] flex items-center justify-center bg-white'>
+            <img className='w-full h-auto max-h-[600px] object-contain' src={image} alt="" />
           </div>
         </div>
 
         {/* Product Info */}
         <div className='flex-1'>
-          <h1 className='font-medium text-2xl mt-2'>{productData.name}</h1>
+          <div className="flex items-start gap-4">
+            <h1 className='font-medium text-2xl mt-2'>{productData.name}</h1>           
+          </div>
 
           {/* 별점 */}
           <div className='flex items-center gap-1 mt-2'>
@@ -81,6 +118,7 @@ const Product = () => {
               )}
             </p>
           )}
+
           {/* 설명 */}
           <p className='mt-5 text-gray-500 md:w-4/5'>{productData.description}</p>
 
@@ -94,7 +132,7 @@ const Product = () => {
                     <button
                       key={i}
                       onClick={() => setSelectedOption(opt)}
-                      className={`px-3 py-1 border rounded ${opt.weight === selectedOption.weight ? "bg-blue-100 border-blue-500" : "hover:bg-blue-50"}`}
+                      className={`px-3 py-1 border rounded ${opt.weight === selectedOption?.weight ? "bg-blue-100 border-blue-500" : "hover:bg-blue-50"}`}
                     >
                       {opt.weight}
                     </button>
@@ -103,9 +141,26 @@ const Product = () => {
               </>
             )}
           </div>
+
+          {/* seller info (logo + petshop name) - centered, no gray box */}
+          <div className="mt-4 mb-6 flex items-center gap-4 justify-start">
+            {productData.sellerLogo ? (
+              <img
+                src={productData.sellerLogo}
+                alt={productData.sellerName || 'seller'}
+                className="w-12 h-12 rounded-full object-cover"
+              />
+            ) : (
+              <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-400">No</div>
+            )}
+            <div className="flex flex-col items-start">
+              <span className="text-base font-semibold text-gray-800">{productData.sellerName || 'Seller'}</span>
+            </div>
+          </div>
+
           {/* ADD TO CART */}
           <button onClick={()=>addToCart(productData._id, selectedOption)} className='bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold px-8 py-3 rounded-xl shadow-md shadow-blue-200 hover:from-blue-600 hover:to-blue-700 active:scale-95 transition-all duration-300 ease-in-out'>ADD TO CART</button>
-          
+
           <hr className='mt-10 sm:4 '/>
           <div className='text-sm text-gray-500 mt-6 mb-12 flex flex-col gap-2'>
             <p>100% Original product</p>
@@ -114,6 +169,7 @@ const Product = () => {
           </div>
         </div>
       </div>
+
       {/* Description & Review section */}
       <div className='mt-0'>
         <div className='flex border-b'>
@@ -124,12 +180,12 @@ const Product = () => {
             <p>{productData.description}</p>
           </div>
       </div>
-      {/* display similar product */}
-      
-      <SimilarProducts category={productData.category} subCategory={productData.subCategory} selectedOption={selectedOption} />
 
+      {/* display similar product */}
+      <SimilarProducts category={productData.category} subCategory={productData.subCategory} selectedOption={selectedOption} />
     </div>
   )
 }
 
 export default Product
+// ...existing code...
