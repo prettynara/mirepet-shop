@@ -12,32 +12,68 @@ const SellerDetail = () => {
   const [sellerProducts, setSellerProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [likes, setLikes] = useState(0);
+  const [liked, setLiked] = useState(false);
   const [error, setError] = useState(null);
 
 useEffect(() => {
     if (!sellerId) return;
+    //console.debug('SellerDetail: sellerId ->', sellerId);
     const fetch = async () => {
       setLoading(true);
       setError(null);
       try {
         // 1) try to fetch single seller (may be protected)
         try {
-          const res = await axios.get(`${API_BASE}/api/sellers/${sellerId}`);
-          const payload = res.data?.seller || res.data;
-          if (payload) setSeller(payload);
-          // 좋아요 수 초기화( DB에 저장된 값이 있으면 사용)
-          setLikes(payload.likes ?? payload.likeCount ?? 0);
+          const token = localStorage.getItem('token');
+          //console.debug('get/api/sellers/:id', res.status, res.data);
+          // normalize payload: try several shapes
+          let payload = res.data;
+          // case: { seller: {...} }
+          if (payload && payload.seller) payload = payload.seller;
+          // case: server returned { sellers: [...] } (route misconfigured) -> find by id
+          if (payload && Array.isArray(payload.sellers)) {
+            const found = payload.sellers.find((s) => String(s._id) === String(sellerId));
+            if (found) payload = found;
+          }
+          // case: { data: {...} }
+          if ((!payload || Object.keys(payload).length === 0) && res.data?.data) payload = res.data.data;
+
+          // final check: ensure payload looks like a single seller object
+          if (payload && (payload._id || payload.id || payload.name)) {
+            setSeller(payload);
+            //console.debug('SellerDetail: normalized seller payload ->', payload);
+            setLikes(Number(payload.likes ?? payload.likeCount ?? 0));
+          } else {
+            //console.debug('Seller payload empty after normalization, falling back to list', res.data);
+          }
         } catch (err) {
           // fallback: fetch public sellers list and find by id
           try {
             const list = await axios.get(`${API_BASE}/api/sellers`);
+            //console.debug('GET /api/sellers (fallback) ->', list.status, list.data);
             const found = (list.data?.sellers || []).find((s) => String(s._id) === String(sellerId));
-            if (found) setSeller(found);
-            setLikes(found.likes ?? found.likeCount ?? 0);
+            if (found) {
+              setSeller(found);
+              setLikes(Number(found.likes ?? found.likeCount ?? 0));
+              //console.debug('SellerDetail: found in list ->', found);
+            } else {
+              //console.debug('SellerDetail: seller not found in sellers list');
+            }
           } catch (e) {
-            // ignore - we'll still try to get products
-            console.debug("fallback get sellers failed", e?.message || e);
+            console.debug("fallback get sellers failed", e?.response?.data || e?.message || e);
           }
+        }
+
+        // read client liked state from localStorage and adjust likes shown
+        try {
+          const likedMap = JSON.parse(localStorage.getItem('likedSellers') || '{}');
+          const isLiked = !!likedMap[sellerId];
+          setLiked(isLiked);
+          if (isLiked) {
+            setLikes((cur) => Number(cur || 0) + 1);
+          }
+        } catch (e) {
+          // ignore
         }
 
         // 2) fetch products and filter by seller id
@@ -63,6 +99,43 @@ useEffect(() => {
     };
     fetch();
   }, [sellerId]);
+
+  // toggle like from SellerDetail view (optimistic + persist)
+const toggleLike = async () => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        const res = await axios.post(
+          `${API_BASE}/api/sellers/${sellerId}/like`,
+          {},
+          { headers: { Authorization: `Bearer ${token}` }, withCredentials: true }
+        );
+        if (res.data?.success) {
+          setLiked(!!res.data.liked);
+          setLikes(Number(res.data.likes || 0));
+          try {
+            const map = JSON.parse(localStorage.getItem('likedSellers') || '{}');
+            map[sellerId] = !!res.data.liked;
+            localStorage.setItem('likedSellers', JSON.stringify(map));
+          } catch {}
+        }
+      } catch (err) {
+        console.debug('like API failed', err?.response?.data || err.message);
+      }
+      return;
+    }
+
+    // unauthenticated fallback
+    const newLiked = !liked;
+    setLiked(newLiked);
+    setLikes((cur) => Math.max(0, Number(cur || 0) + (newLiked ? 1 : -1)));
+    try {
+      const map = JSON.parse(localStorage.getItem('likedSellers') || '{}');
+      map[sellerId] = !!newLiked;
+      localStorage.setItem('likedSellers', JSON.stringify(map));
+    } catch {}
+    alert('Login to persist likes across devices.');
+  };
 
   if (loading) return <div className="text-center mt-20">Loading...</div>;
   if (!seller && sellerProducts.length === 0)
@@ -98,7 +171,7 @@ useEffect(() => {
 
         <div className="absolute top-3 right-3 z-30">
           <div className="flex items-center gap-2 bg-white border rounded-full px-3 py-1 shadow-md">
-            <span className="text-red-500 text-lg select-none">❤️</span>
+            <button onClick={toggleLike} className="text-red-500 text-lg select-none">{liked ? '❤️':'🤍'}</button>
             <span className="font-semibold text-sm">{likes ?? seller?.likes ?? 0}</span>
           </div>
         </div>

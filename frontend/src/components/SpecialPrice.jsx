@@ -37,6 +37,8 @@ const SpecialPrice = () => {
               image={item.image}
               name={item.name}
               seller={item.seller}
+              sellerName={item.sellerName || (typeof item.seller === 'object' ? item.seller.petshopName: '')}
+              sellerLogo={item.sellerLogo || (typeof item.seller === 'object' ? item.seller.logo:'')}
               option={option}
             />
         );

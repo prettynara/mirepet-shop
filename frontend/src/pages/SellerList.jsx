@@ -11,6 +11,13 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 const Sellers = ({ userRole }) => {
   const [allSellers, setAllSellers] = useState([]);
   const [filteredSellers, setFilteredSellers] = useState(initialSellers);
+  //likes map: { sellerId: count }
+  const [likesMap, setLikesMap] = useState({});
+  // liked state per client (persisted in localStorage)
+  const [likedMap, setLikedMap] = useState(() => {
+    try {return JSON.parse(localStorage.getItem('likedSellers') || '{}') ;} catch {return {};}
+  });
+
   const { role: ctxRole } = useRole();
   const effectiveRole = userRole || ctxRole || "guest";
   const [search, setSearch] = useState("");
@@ -28,11 +35,62 @@ const Sellers = ({ userRole }) => {
       const sellers = res.data?.sellers || [];
       setAllSellers(sellers);
       setFilteredSellers(sellers);
+      // initialize likes map from server data
+      const lm = {};
+      sellers.forEach(s => { lm[s._id] = Number(s.likes ?? s.likeCount ?? 0); });
+      setLikesMap(lm);
     } catch (err) {
       console.error("Failed to fetch sellers:", err);
       setAllSellers([]);
       setFilteredSellers([]);
     }
+  };
+
+  // toggle like for a seller (optimistic, persisted in localStorage)
+  const toggleLike = async (e, id) => {
+    e.stopPropagation();
+    const token = localStorage.getItem('token');
+
+    if (token) {
+      try {
+        const res = await axios.post(
+          `${API_BASE}/api/sellers/${id}/like`,
+          {},
+          {
+            headers: { Authorization: `Bearer ${token}` },
+            withCredentials: true,
+          }
+        );
+        if (res.data?.success) {
+          const { liked, likes } = res.data;
+          setLikedMap(prev => ({ ...prev, [id]: !!liked }));
+          setLikesMap(prev => ({ ...prev, [id]: Number(likes || 0) }));
+          try {
+            const local = JSON.parse(localStorage.getItem('likedSellers') || '{}');
+            local[id] = !!liked;
+            localStorage.setItem('likedSellers', JSON.stringify(local));
+          } catch {}
+        }
+      } catch (err) {
+        console.debug('like API failed', err?.response?.data || err.message);
+      }
+      return;
+    }
+
+    // unauthenticated fallback (local-only)
+    const currentlyLiked = !!likedMap[id];
+    const newLiked = !currentlyLiked;
+    setLikedMap(prev => {
+      const next = { ...prev, [id]: newLiked };
+      try { localStorage.setItem('likedSellers', JSON.stringify(next)); } catch {}
+      return next;
+    });
+    setLikesMap(prev => {
+      const cur = Number(prev[id] || 0);
+      const nextCount = cur + (newLiked ? 1 : -1);
+      return { ...prev, [id]: Math.max(0, nextCount) };
+    });
+    alert('Login to save likes across devices.');
   };
 
   const handleSearch = (e) => {
@@ -131,9 +189,21 @@ const Sellers = ({ userRole }) => {
             to={`/seller-detail/${seller._id}`}
             className="relative block cursor-pointer bg-white border border-blue-100 shadow-md rounded-2xl hover:shadow-lg hover:-translate-y-1 transition-all duration-200 overflow-hidden"
           >
+            {/* like / heart button - top-left */}
+            <button
+              onClick={(e) => toggleLike(e, seller._id)}
+              className="absolute top-3 left-3 z-20 flex items-center gap-2 bg-white/90 px-2 py-1 rounded-full shadow-sm text-sm"
+              aria-label={likedMap[seller._id] ? 'Unlike seller' : 'Like seller'}
+            >
+              <span className={likedMap[seller._id] ? "text-red-500" : "text-gray-400"} style={{fontSize: 16}}>
+                {likedMap[seller._id] ? '❤️' : '🤍'}
+              </span>
+              <span className="text-xs font-medium">{likesMap[seller._id] ?? 0}</span>
+            </button>            
             {effectiveRole === "admin" && (
               <div className="absolute top-3 right-3 flex gap-2 z-10">
                 <button
+
                   onClick={(e) => toggleHold(e, seller._id)}
                   className={`px-2 py-1 text-xs rounded-md shadow ${
                     seller.isOnHold

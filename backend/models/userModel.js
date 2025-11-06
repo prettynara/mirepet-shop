@@ -31,6 +31,9 @@ const userSchema = new mongoose.Schema(
     address: {type: String, trim: true, default: ''},
     description: {type: String, trim: true, default: ''},
     logo: {type: String, trim: true, default: ''},
+    // likes for seller profiles
+    likes: { type: Number, default: 0 },
+    likedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'user' }],
     resetPasswordToken: { type: String },
     resetPasswordExpire: { type: Date },
   },
