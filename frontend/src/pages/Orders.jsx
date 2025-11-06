@@ -1,35 +1,141 @@
 import React, { useContext, useState, useEffect } from 'react'
 import { ShopContext } from '../context/ShopContext'
 import ProductsTitle from '../components/ProductsTitle';
+import { assets } from '../assets/assets';
+import axios from 'axios';
+
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 
 const Orders = () => {
 
   const { products, currency } = useContext(ShopContext);
   const [orders, setOrders] = useState([]);
+  const [productMap, setProductMap] = useState({});
 
   const convertOrderItems = (itemsObj) => {
-  if (!itemsObj || typeof itemsObj !== 'object') return [];
-  const out = [];
-  for (const productId of Object.keys(itemsObj)) {
-    const opts = itemsObj[productId] || {};
-    for (const optKey of Object.keys(opts)) {
-      const qty = opts[optKey];
-      if (!qty) continue;
-      out.push({ _id: productId, option: { weight: optKey, quantity: optKey }, quantity: qty });
+    if (!itemsObj || typeof itemsObj !== 'object') return [];
+    const out = [];
+    for (const productId of Object.keys(itemsObj)) {
+      const opts = itemsObj[productId] || {};
+      for (const optKey of Object.keys(opts)) {
+        const qty = opts[optKey];
+        if (!qty) continue;
+        out.push({ _id: productId, option: { weight: optKey, quantity: optKey }, quantity: qty });
+      }
     }
-  }
-  return out;
-};
+    return out;
+  };
+
+  // resolve image source safely from product or item snapshot
+  const resolveImageSrc = (prod, item) => {
+    const candidate = prod || item?.product || item;
+    if (!candidate) return null;
+    const imgField = candidate.image ?? candidate.images ?? candidate.imageUrl ?? candidate.img ?? null;
+    if (Array.isArray(imgField) && imgField.length) return imgField[0];
+    if (typeof imgField === 'string' && imgField.trim()) return imgField.trim();
+    return assets?.placeholder || null;
+  };
+
+  // enrich orders by attaching product snapshot when missing (tries products context first, then backend)
+  const enrichOrdersWithProducts = async (rawOrders) => {
+    if (!Array.isArray(rawOrders) || rawOrders.length === 0) return rawOrders;
+    const updated = JSON.parse(JSON.stringify(rawOrders)); // shallow clone
+    const fetchCache = {}; // avoid duplicate fetches per product id
+
+    await Promise.all(updated.map(async (order) => {
+      const items = Array.isArray(order.items) ? order.items : convertOrderItems(order.items);
+      order.items = items;
+      await Promise.all(items.map(async (it) => {
+        const pid = String(it._id || it.product?._id || '');
+        if (!pid) return;
+        // find in current products context
+        const found = (products || []).find(p => String(p._id) === pid);
+        if (found) {
+          it._product = found;
+          return;
+        }
+        // if already fetched in this run, reuse
+        if (fetchCache[pid]) {
+          it._product = fetchCache[pid];
+          return;
+        }
+        // try backend single product endpoint
+         try {
+          // Prefer to fetch the product list once (server exposes /api/product/list as used elsewhere)
+          if (!fetchCache.__list__) {
+            try {
+              const listRes = await axios.get(`${API_BASE}/api/product/list`);
+              const list = Array.isArray(listRes.data?.products) ? listRes.data.products : (Array.isArray(listRes.data) ? listRes.data : []);
+              fetchCache.__list__ = list;
+            } catch (err) {
+              fetchCache.__list__ = null; // mark as attempted
+            }
+          }
+          const list = fetchCache.__list__ || [];
+          const candidate = list.find(p => String(p._id) === pid || String(p.id) === pid) || null;
+          if (candidate) {
+            fetchCache[pid] = candidate;
+            it._product = candidate;
+            return;
+          }
+        } catch (e) {
+          console.debug('[Orders] product list fetch error for', pid, e?.message || e);
+        }
+        // mark missing to avoid repeated attempts in same run
+        fetchCache[pid] = null;
+        // no product found — leave as-is
+      }));
+    }));
+
+    return updated;
+  };
 
   useEffect(() => {
-    try {
-      const stored = JSON.parse(localStorage.getItem('orders')) || [];
-      setOrders(stored);
-    } catch (e) {
-      console.warn('Failed to load orders', e);
-      setOrders([]);
-    }
-  }, []);
+    let mounted = true;
+    (async () => {
+      try {
+        const stored = JSON.parse(localStorage.getItem('orders')) || [];
+        // if global products list is empty, fetch product list from backend and build map
+        if ((!products || products.length === 0) && stored.length > 0) {
+          try {
+            const res = await axios.get(`${API_BASE}/api/product/list`);
+            const list = Array.isArray(res.data?.products) ? res.data.products : (Array.isArray(res.data) ? res.data : []);
+            const map = {};
+            list.forEach(p => { if (p && (p._id || p.id)) map[String(p._id || p.id)] = p; });
+            if (mounted) setProductMap(map);
+          } catch (err) {
+            console.debug('[Orders] failed to fetch product list', err?.response?.status || err?.message);
+          }
+        } else {
+          // build map from products context
+          const map = {};
+          (products || []).forEach(p => { if (p && (p._id || p.id)) map[String(p._id || p.id)] = p; });
+          if (mounted) setProductMap(map);
+        }
+        const enriched = await enrichOrdersWithProducts(stored);
+        if (mounted) setOrders(enriched);
+      } catch (e) {
+        console.warn('Failed to load orders', e);
+        if (mounted) setOrders([]);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []); // load once on mount
+
+  // when products list becomes available later, re-enrich to pick images from context
+  useEffect(() => {
+    if (!orders || !orders.length || !products || !products.length) return;
+    let mounted = true;
+    (async () => {
+      try {
+        const enriched = await enrichOrdersWithProducts(orders);
+        if (mounted) setOrders(enriched);
+      } catch (e) {
+        console.debug('re-enrich orders failed', e);
+      }
+    })();
+    return () => { mounted = false; };
+  }, [products]);
 
   if (!orders.length) {
     return (
@@ -42,9 +148,10 @@ const Orders = () => {
     );
   }
 
+
   return (
     <div className='border-t pt-14 px-4 sm:px-8 lg:px-20 min-h-[80vh]'>
-      
+
       {/* Title */}
       <div className='text-2xl mb-8'>
         <ProductsTitle text1={'MY'} text2={'ORDERS'} />
@@ -53,11 +160,11 @@ const Orders = () => {
       {/* Orders List */}
       <div className="flex flex-col gap-6">
         {orders.map((order, idx) => (
-          <div key={order.id || idx} className='flex flex-col md:flex-row md:items-center md:justify-between gap-6 bg-white rounded-xl shadow-sm border p-5 hover:shadow-md transition-all'>
+          <div key={order._id || order.id || idx} className='flex flex-col md:flex-row md:items-center md:justify-between gap-6 bg-white rounded-xl shadow-sm border p-5 hover:shadow-md transition-all'>
             <div className='flex items-start gap-4 text-sm sm:text-base'>
               <div>
-                <p className='font-medium text-base sm:text-lg'>Order #{order.id}</p>
-                <p className='mt-1 text-sm text-gray-500'>Date: <span className='text-gray-400'>{new Date(order.date).toLocaleString()}</span></p>
+                <p className='font-medium text-base sm:text-lg'>Order #{order._id ? String(order._id).slice(-6) : (order.id || idx)}</p>
+                <p className='mt-1 text-sm text-gray-500'>Date: <span className='text-gray-400'>{new Date(order.date || order.createdAt || Date.now()).toLocaleString()}</span></p>
                 <p className='mt-2 text-sm text-gray-600'>Status: <strong className='text-green-600'>{order.status}</strong></p>
               </div>
             </div>
@@ -65,14 +172,23 @@ const Orders = () => {
             <div className='flex-1'>
               <div className='grid grid-cols-1 gap-3'>
                 {(Array.isArray(order.items) ? order.items : convertOrderItems(order.items)).map((it, i) => {
-                  const prod = products.find(p => p._id === it._id) || it;
-                  const option = prod.options?.find(o => (o.weight || o.quantity) === (it.option?.weight || it.option?.quantity)) || it.option;
+                  const prodRef = it.productSnapshot || it._product || productMap[String(it._id)] || ((products || []).find(p => String(p._id) === String(it._id)) || it.product)|| it;
+                  const option = (prodRef?.options || []).find(o =>
+                    String(o.weight ?? o.quantity) === String(it.option?.weight ?? it.option?.quantity)
+                  ) || it.option || {};
+
+                  const imgSrc = resolveImageSrc(prodRef, it);
+
                   return (
                     <div key={i} className='flex items-center justify-between border rounded p-3 bg-slate-50'>
                       <div className='flex items-center gap-4'>
-                        <img src={prod.image?.[0] || ''} alt='' className='w-16 h-16 object-cover rounded' />
+                        {imgSrc ? (
+                          <img src={imgSrc} alt={prodRef.name || 'product'} className='w-16 h-16 object-cover rounded' />
+                        ) : (
+                          <div className='w-16 h-16 bg-gray-100 rounded flex items-center justify-center text-gray-400'>No image</div>
+                        )}
                         <div>
-                          <p className='font-medium'>{prod.name || prod.title || 'Product'}</p>
+                          <p className='font-medium'>{prodRef.name || prodRef.title || it.name || 'Product'}</p>
                           <p className='text-sm text-gray-500'>{option?.weight || option?.quantity || ''}</p>
                         </div>
                       </div>

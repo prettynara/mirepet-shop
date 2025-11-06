@@ -28,9 +28,9 @@ const SellerNavbar = () => {
         });
         const data = await res.json().catch(() => null);
         const u = data?.user || data;
+        // always set user when /api/me returns an object (don't require petshopName)
         if (u && u.petshopName) {
           setUser(u);
-          // keep local cache in sync
           try { localStorage.setItem('user', JSON.stringify(u)); } catch (e) {/* ignore */ }
         } else {
           setUser(null);
@@ -43,22 +43,42 @@ const SellerNavbar = () => {
 }, []);
 
   const handleLogout = async () => {
-     try {
-      await fetch('/api/logout', { method: 'POST', credentials: 'include' });
-    } catch (err) {
-      console.error('logout request failed', err);
+    try {
+      const res = await fetch(`${API_BASE}/api/logout`, { method: 'POST', credentials: 'include' });
+      // ignore logout 404 (server might not implement /api/logout)
+      if (!res.ok && res.status !== 404) {
+        console.warn('Logout returned', res.status);
+      }
+    } catch (e) {
+      console.warn('Logout network error', e);
     } finally {
-      // client-side cleanup
       localStorage.removeItem('token');
-      localStorage.removeItem('role');
-      if (typeof setRole === 'function') setRole('guest');
-      setUser(null);
-      setVisible(false);
-      navigate('/');
+      localStorage.removeItem('user');
+      navigate('/login');
     }
   };
 
   const petshopName = user?.petshopName || 'Seller';
+
+  const [orderCount, setOrderCount] = useState(0);
+  
+  useEffect(() => {
+    if (!user || !user._id) return;
+    const loadCount = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_BASE}/api/orders/mine/count`, {
+          headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+          credentials: 'include'
+        });
+        const data = await res.json().catch(() => null);
+        if (res.ok && data?.count >= 0) setOrderCount(data.count);
+      } catch (e) {
+        console.debug('load seller order count failed', e);
+      }
+    };
+    loadCount();
+  }, [user]);
 
   return (
       <div className="fixed top-0 left-0 w-full bg-white/90 backdrop-blur-md shadow-md z-30">
@@ -118,8 +138,12 @@ const SellerNavbar = () => {
             {/* New Order */}
             <Link to='/myorders' className='relative'>
                 <img src={assets.neworder_icon} className='w-8 min-w-5' alt=""/>
-                <p className='absolute -top-2 -right-2 w-5 h-5 flex items-center justify-center bg-blue-600 text-white text-xs rounded-full'></p>
-            </Link>
+                 {orderCount > 0 ? (
+                  <p className='absolute -top-2 -right-2 min-w-[20px] h-5 px-1 flex items-center justify-center bg-blue-600 text-white text-xs rounded-full'>{orderCount}</p>
+                ) : (
+                  <p className='absolute -top-2 -right-2 w-5 h-5 flex items-center justify-center bg-blue-600 text-white text-xs rounded-full'>0</p>
+                )}
+                </Link>
   
           </div>
 

@@ -8,6 +8,7 @@ import productRouter from './routes/productRoute.js';
 import sellerRouter from './routes/sellerRoute.js';
 import { loginUser} from './controllers/userController.js';
 import path from 'path';
+import orderRoute from './routes/orderRoute.js';
 
 
 // App Config
@@ -52,3 +53,4 @@ app.listen(port, ()=> console.log('Server started on PORT : '+ port))
 
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
+app.use('/api/orders', orderRoute);

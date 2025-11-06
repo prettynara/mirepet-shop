@@ -17,20 +17,39 @@ const SellerProfile = ({ sellerId: propSellerId }) => {
   });
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [logoFile, setLogoFile] = useState(null);
+  const [error, setError] = useState(null);
 
 // get sellerId from localStorage or /api/me if not provided
   useEffect(() => {
     const init = async () => {
+      setLoading(true);
       try {
         if (propSellerId) {
           setSellerId(propSellerId);
           return;
         }
+
+        // try to read localStorage.user (support several shapes) 
+        const raw = localStorage.getItem("user") || "null";
+        let parsed = null;
+        try {
+          parsed = JSON.parse(raw);
+        } catch (e) {
+          parsed = raw;
+        }
+        const candidate = parsed?.user || parsed;
+        if (candidate && (candidate._id || candidate.id)) {
+          setSellerId(candidate._id || candidate.id);
+          return;
+        }       
         const stored = JSON.parse(localStorage.getItem("user") || "null");
         if (stored && stored._id) {
           setSellerId(stored._id);
           return;
         }
+
+        // fallback to /api/me if token exists
         const token = localStorage.getItem("token");
         if (!token) {
           setLoading(false);
@@ -68,10 +87,15 @@ const SellerProfile = ({ sellerId: propSellerId }) => {
           headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
           withCredentials: true,
         });
-        if (res.data) {
-          // adapt shape if backend returns { seller } or direct object
-          const payload = res.data.seller || res.data;
+        const body = res?.data || {};
+        // support multiple possible shapes : { seller: {...} } | { user: {...} } | { success:true, user: {...} } | direct object
+      const payload = body.seller || body.user || (body.success && (body.data || body.payload)) || body || {};
+        if (payload && Object.keys(payload).length) {
           setSellerData((prev) => ({ ...prev, ...payload }));
+          // keep local cache consistent if response contains the user object
+          try { if (payload._id) localStorage.setItem("user", JSON.stringify(payload)); } catch(e) {}
+        } else {
+          console.debug('SellerProfile: no payload in response', body);
         }
       } catch (error) {
         console.error("Failed to fetch seller data:", error);
@@ -107,8 +131,12 @@ const SellerProfile = ({ sellerId: propSellerId }) => {
       );
       setIsEditing(false);
       alert("Seller profile updated successfully!");
-      // update local cache
-      if (res.data?.seller) localStorage.setItem("user", JSON.stringify(res.data.seller));
+      // update local cache (normalize possible shapes)
+      const body = res?.data || {};
+      const updated = body.seller || body.user || (body.success && (body.data || body.payload)) || body || null;
+      if (updated && (updated._id || updated.petshopName)) {
+        try { localStorage.setItem("user", JSON.stringify(updated)); } catch(e) {}
+      }
     } catch (error) {
       console.error("Failed to save seller data:", error);
       alert("Failed to save changes. Please try again.");
