@@ -9,6 +9,8 @@ import sellerRouter from './routes/sellerRoute.js';
 import { loginUser} from './controllers/userController.js';
 import path from 'path';
 import orderRoute from './routes/orderRoute.js';
+import http from 'http';
+import { Server as IOServer } from 'socket.io';
 
 
 // App Config
@@ -48,9 +50,40 @@ app.get('/',(req,res)=>{
     res.send("API Working")
 })
 
-// Server start
-app.listen(port, ()=> console.log('Server started on PORT : '+ port))
 
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 app.use('/api/orders', orderRoute);
+
+const server = http.createServer(app);
+const io = new IOServer(server, {
+  cors: {
+    origin: process.env.FRONTEND_ORIGIN || 'http://localhost:5173',
+    credentials: true
+  }
+});
+
+// allow controllers to use io via req.app.get('io')
+app.set('io', io);
+
+io.on('connection', (socket) => {
+  console.debug('socket connected', socket.id);
+  socket.on('joinOrder', (orderId) => {
+    if (orderId) {
+      socket.join(`order:${orderId}`);
+      console.debug(`socket ${socket.id} joined order:${orderId}`);
+    }
+  });
+  socket.on('leaveOrder', (orderId) => {
+    if (orderId) socket.leave(`order:${orderId}`);
+  });
+  socket.on('disconnect', () => {
+    console.debug('socket disconnected', socket.id);
+  });
+});
+
+// replace app.listen(...) usage with server.listen(...)
+const PORT = process.env.PORT || 4000;
+server.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});

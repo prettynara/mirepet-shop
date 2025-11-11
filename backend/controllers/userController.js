@@ -258,4 +258,19 @@ const updateClient = async (req, res) => {
   }
 };
 
+export const logoutUser = (req, res) => {
+  try {
+    // 클라이언트가 httpOnly cookie로 토큰을 받는 경우 제거
+    res.clearCookie('token', {
+      httpOnly: true,
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      secure: process.env.NODE_ENV === 'production'
+    });
+    return res.json({ success: true, message: 'Logged out' });
+  } catch (err) {
+    console.error('logoutUser error', err);
+    return res.status(500).json({ success: false, message: 'Logout failed' });
+  }
+};
+
 export { loginUser, registerUser, adminLogin, forgotPassword, resetPassword, me, getClient, updateClient }

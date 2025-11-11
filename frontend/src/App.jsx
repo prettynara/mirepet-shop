@@ -27,6 +27,7 @@ import ClientProfile from './pages/ClientProfile';
 import ClientList from './pages/ClientList';
 import SellerList from './pages/SellerList';
 import SellerDetail from './pages/SellerDetail';
+import TrackOrder from './pages/TrackOrder';
 import { ToastContainer} from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -58,6 +59,7 @@ const App = () => {
         <Route path="/seller-info" element={<SellerInfo />} />
         <Route path='/place-order' element={<PlaceOrder />} />
         <Route path='/orders' element={<Orders />} />
+        <Route path='/track/:orderId' element={<TrackOrder />} />
         <Route path='/admin' element={<Admin />} />
         <Route path='/myorders' element={<MyOrders />} />
         <Route path='/myproducts' element={<MyProducts />} />

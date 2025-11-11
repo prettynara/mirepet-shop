@@ -1,4 +1,5 @@
-import React, { useContext, useState, useEffect } from 'react'
+import React, { useContext, useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom';
 import { ShopContext } from '../context/ShopContext'
 import ProductsTitle from '../components/ProductsTitle';
 import { assets } from '../assets/assets';
@@ -11,6 +12,63 @@ const Orders = () => {
   const { products, currency } = useContext(ShopContext);
   const [orders, setOrders] = useState([]);
   const [productMap, setProductMap] = useState({});
+  const pollRef = useRef(null);
+
+  // ensure hooks order stable: call useNavigate at top-level
+  const navigate = useNavigate();
+
+   // new: fetch client orders from server
+  const fetchClientOrders = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.get(`${API_BASE}/api/orders/client`, {
+        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        withCredentials: true
+      });
+      console.debug('[Orders] GET /api/orders/client status=', res.status, 'data=', res.data);
+      const serverOrders = Array.isArray(res.data?.orders) ? res.data.orders : [];
+      // debug: show returned orders and their id-like fields (safe optional chaining)
+      console.debug(
+        '[Orders] fetched serverOrders count=',
+        serverOrders.length,
+        'sample=',
+        serverOrders.slice(0, 5).map(o => ({
+          _id: o._id,
+          id: o.id,
+          maybe_id: o._id?.$oid || o._id?._id || o._doc?._id || null
+        }))
+      );
+      // build productMap from products context OR response items
+      const map = {};
+      (products || []).forEach(p => { if (p && (p._id || p.id)) map[String(p._id || p.id)] = p; });
+      // also include any product objects returned inside order.items
+      serverOrders.forEach(o => (o.items || []).forEach(it => {
+        const p = it.product || it.productSnapshot;
+        if (p && (p._id || p.id)) map[String(p._id || p.id)] = p;
+      }));
+      setProductMap(map);
+      setOrders(serverOrders);
+      // persist fallback locally if desired
+      try { localStorage.setItem('orders', JSON.stringify(serverOrders)); } catch(e) {}
+    } catch (err) {
+      console.debug('Failed to fetch client orders, falling back to localStorage', err?.response?.data || err?.message);
+      // fallback to localStorage (existing behavior)
+      try {
+        const stored = JSON.parse(localStorage.getItem('orders') || '[]');
+        setOrders(stored);
+      } catch (e) {
+        setOrders([]);
+      }
+    }
+  };
+
+  useEffect(() => {
+    fetchClientOrders();
+    // poll every 10s to pick up status changes by seller
+    pollRef.current = setInterval(fetchClientOrders, 10000);
+    return () => clearInterval(pollRef.current);
+  }, [products]);
+
 
   const convertOrderItems = (itemsObj) => {
     if (!itemsObj || typeof itemsObj !== 'object') return [];
@@ -148,6 +206,28 @@ const Orders = () => {
     );
   }
 
+  // status -> badge classes mapping
+  const statusClasses = {
+    new: { bg: 'bg-blue-100', text: 'text-blue-800' },
+    pending: { bg: 'bg-yellow-100', text: 'text-yellow-800' },
+    ready: { bg: 'bg-indigo-100', text: 'text-indigo-800' },
+    'out-for-delivery': { bg: 'bg-orange-100', text: 'text-orange-800' },
+    'out-for-delivery_alt': { bg: 'bg-orange-100', text: 'text-orange-800' },
+    delivered: { bg: 'bg-green-100', text: 'text-green-800' },
+    cancelled: { bg: 'bg-red-100', text: 'text-red-800' },
+    default: { bg: 'bg-gray-100', text: 'text-gray-700' },
+  };
+
+    const renderStatusBadge = (status) => {
+    const key = (status || '').toString().toLowerCase();
+    const cls = statusClasses[key] || statusClasses.default;
+    return (
+      <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${cls.bg} ${cls.text}`}>
+        {status || 'unknown'}
+      </span>
+    );
+  };
+
 
   return (
     <div className='border-t pt-14 px-4 sm:px-8 lg:px-20 min-h-[80vh]'>
@@ -165,7 +245,7 @@ const Orders = () => {
               <div>
                 <p className='font-medium text-base sm:text-lg'>Order #{order._id ? String(order._id).slice(-6) : (order.id || idx)}</p>
                 <p className='mt-1 text-sm text-gray-500'>Date: <span className='text-gray-400'>{new Date(order.date || order.createdAt || Date.now()).toLocaleString()}</span></p>
-                <p className='mt-2 text-sm text-gray-600'>Status: <strong className='text-green-600'>{order.status}</strong></p>
+                <p className='mt-2 text-sm text-gray-600'>Status: {renderStatusBadge(order.status)}</p>
               </div>
             </div>
 
@@ -204,7 +284,30 @@ const Orders = () => {
 
             <div className='flex flex-col items-end gap-2 md:w-48'>
               <p className='font-semibold'>{currency}{order.amount}</p>
-              <button className='bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-2 rounded-lg'>Track Order</button>
+              <button
+                onClick={() => {
+                  // try several common id shapes returned by different mongoose/lean/populate combos
+                  const candidates = [
+                    order._id,
+                    order.id,
+                    order._id?.$oid,
+                    order._id?._id,
+                    order._doc?._id,
+                    order._doc?._id?.$oid
+                  ];
+                  // pick first candidate that's a string/number
+                  const oid = candidates.find(v => v !== undefined && v !== null && (typeof v === 'string' || typeof v === 'number'));
+                  console.debug('navigate: idCandidates=', candidates, 'selected=', oid, 'order=', order);
+                  if (!oid) {
+                    alert('Cannot track this order: missing order id. Check Network GET /api/orders/client response in DevTools.');
+                    return;
+                  }
+                  navigate(`/track/${String(oid)}`, { state: { orderId: String(oid) } });
+                }}
+                className='bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-2 rounded-lg'
+              >
+                Track Order
+              </button>
             </div>
           </div>
         ))}
