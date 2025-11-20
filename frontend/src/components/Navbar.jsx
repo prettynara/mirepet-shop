@@ -3,12 +3,12 @@ import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { assets } from './../assets/assets';
 import { ShopContext } from '../context/ShopContext';
 import { useRole } from '../context/RoleContext'; 
-import { toast } from 'react-toastify';
+
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 
 const Navbar = () => {
 
     const [visible, setVisible] = useState(false);
-
     const{setFocusSearch, setShowSearch} = useContext(ShopContext);
     const{getCartCount} = useContext(ShopContext);
     const navigate = useNavigate();
@@ -27,7 +27,7 @@ const Navbar = () => {
           return;
         }
 
-          const res = await fetch('http://localhost:4000/api/me', {
+          const res = await fetch(`${API_BASE}/api/users/me`, {
             headers: {
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${token}`,  // ✅ 토큰 포함
@@ -35,12 +35,18 @@ const Navbar = () => {
             credentials: 'include'
           });
           const data = await res.json();
-          console.log('me:', data);
+          console.log('✅ /api/users/me response:', data);
 
-          if (res.ok) {
-            setUser(data.user || data);
+          if (res.ok && data.success) {
+            setUser(data.user);
           } else{
             setUser(null);
+            if (res.status === 401) {
+              localStorage.removeItem('token');
+              localStorage.removeItem('user');
+              localStorage.removeItem('userId');
+              setRole('guest');
+            }
           }
         } catch (error) {
           console.error('fetch user error', error);
@@ -49,7 +55,7 @@ const Navbar = () => {
       };
 
       fetchUser();
-}, [role]);
+}, [role, setRole]);
 
 
       {/*  useEffect(() => {
@@ -59,20 +65,21 @@ const Navbar = () => {
     const handleLogout = async () => {
       // use absolute or leading slash so Vite dev server proxies correctly
       try {
-        await fetch('http://localhost:4000/api/logout', { method: 'POST', credentials: 'include' });
+        await fetch(`${API_BASE}/api/users/logout`, { method: 'POST', credentials: 'include' });
       } catch (err) {
-        console.debug('logout endpoint absent or failed', err?.message || err);
+        console.debug('logout  failed', err?.message || err);
       }
 
-      // client-side cleanup
+      const userId = localStorage.getItem('userId');
+      if (userId) localStorage.removeItem(`deliveryInfo_${userId}`);
       localStorage.removeItem('token');
-      localStorage.removeItem('role');
       localStorage.removeItem('user');
+      localStorage.removeItem('userId');
+      localStorage.removeItem('role');
       setUser(null);
-      if (typeof setRole === 'function') setRole('guest');
-      navigate('/');
-      //toast.info('Logged out');
-    };
+      setRole('guest');
+      navigate('/', { replace: true });
+      };
     
     const handleSearchClick = () => {
     // 검색어가 없으면 Products 페이지 이동만

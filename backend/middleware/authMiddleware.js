@@ -21,13 +21,27 @@ const requireAuth = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    // decoded should have id field
-    const user = await User.findById(decoded.id).select('-password -resetPasswordToken -resetPasswordExpire');
+    console.debug('[authMiddleware] decoded:', decoded);
+
+    const userId = decoded.userId || decoded.id || decoded._id;
+  
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Not authorized - invalid token structure' });
+    }
+
+    const user = await User.findById(userId).select('-password -resetPasswordToken -resetPasswordExpire');
     if (!user) {
+      console.warn('[authMiddleware] User not found for id:', userId);
       return res.status(401).json({ success: false, message: 'Not authorized - user not found' });
     }
 
-    req.user = { id: user._id.toString(), role: user.role, email: user.email };
+    req.user = { 
+      id: user._id.toString(), 
+      role: user.role, 
+      email: user.email 
+    }; 
+    console.debug('[authMiddleware] req.user:', req.user);
+
     next();
   } catch (err) {
     console.error('authMiddleware error:', err.message);

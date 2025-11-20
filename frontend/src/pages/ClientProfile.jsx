@@ -32,7 +32,7 @@ const ClientProfile = () => {
     const fetchMe = async () => {
       try {
         const token = localStorage.getItem("token");
-        const res = await fetch(`${API_BASE}/api/me`, {
+        const res = await fetch(`${API_BASE}/api/users/me`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -69,7 +69,7 @@ const ClientProfile = () => {
       try {
         setLoading(true);
         const token = localStorage.getItem("token")
-        const res = await axios.get(`${API_BASE}/api/client/${clientId}`, {
+        const res = await axios.get(`${API_BASE}/api/users/client/${clientId}`, {
           headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
           withCredentials: true,
         });
@@ -138,7 +138,7 @@ const ClientProfile = () => {
         ...clientData,
         pets: petData.map(p => ({...p, dob: p.dob ? new Date(p.dob) : null}))
       }
-      const res = await axios.post(`${API_BASE}/api/client/${clientId}`,
+      const res = await axios.post(`${API_BASE}/api/users/client/${clientId}`,
         payload,
         {
           headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, withCredentials: true

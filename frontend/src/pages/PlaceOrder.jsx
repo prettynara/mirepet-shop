@@ -11,9 +11,12 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 const PlaceOrder = () => {
   const navigate = useNavigate();
   const { placeOrder, cartItems, getCartAmount, updateQuantity, clearCart, products } = useContext(ShopContext);
-  const [method, setMethod] = useState('cod');
+  
+  const userId = localStorage.getItem('userId') || 'guest';
+  const deliveryKey = `deliveryInfo_${userId}`;
 
-  const [delivery, setDelivery] = useState({
+  const [method, setMethod] = useState('cod');
+  const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
     email: '',
@@ -26,41 +29,34 @@ const PlaceOrder = () => {
   });
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        const stored = localStorage.getItem('deliveryInfo');
-        if (stored) {
-          setDelivery(JSON.parse(stored));
-          return;
+    const loadDeliveryInfo = async () => {
+      const token = localStorage.getItem('token');
+      if (token && userId !== 'guest') {
+        try {
+          const res = await axios.get(`${API_BASE}/api/users/me/delivery-info`, {
+            headers: { Authorization: `Bearer ${token}` },
+            withCredentials: true
+          });
+          if (res.data?.success && res.data.deliveryInfo) {
+            setFormData(prev => ({ ...prev, ...res.data.deliveryInfo }));
+            localStorage.setItem(deliveryKey, JSON.stringify(res.data.deliveryInfo));
+            return;
+          }
+        } catch (e) {
+          console.debug('Failed to load delivery info from server', e?.message);
         }
-        const token = localStorage.getItem('token');
-        if (!token) return;
-        const res = await fetch(`${API_BASE}/api/me`, {
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          credentials: 'include'
-        });
-        if (!res.ok) return;
-        const data = await res.json();
-        const user = data?.user;
-        if (user) {
-          setDelivery(prev => ({
-            ...prev,
-            firstName: user.name ? user.name.split(' ')[0] : prev.firstName,
-            lastName: user.name ? user.name.split(' ').slice(1).join(' ') : prev.lastName,
-            email: user.email || prev.email,
-            street: user.address || prev.street,
-            phone: user.phone || prev.phone
-          }));
-        }
-      } catch (err) {
-        console.debug('load deliveryInfo failed', err);
       }
+      try {   
+        const stored = JSON.parse(localStorage.getItem(deliveryKey) || '{}');
+        if (Object.keys(stored).length > 0) setFormData(prev => ({ ...prev, ...stored }));
+      } catch (e) {}
     };
-    load();
-  }, []);
+    loadDeliveryInfo();
+  }, [userId, deliveryKey]);
 
-  const handleChange = (key, value) => {
-    setDelivery(prev => ({ ...prev, [key]: value }));
+  const onChangeHandler = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const buildItemsArray = () => {
@@ -73,11 +69,7 @@ const PlaceOrder = () => {
         const prod = (products || []).find(p => String(p._id) === String(productId)) || {};
         const option = prod.options?.find(o => String(o.weight) === String(optKey) || String(o.quantity) === String(optKey)) || {};
         const price = option?.sale_price && option.sale_price < option.price ? option.sale_price : option?.price || prod.price || 0;
-
-        // determine seller id from possible fields
         const sellerId = prod.seller || prod.sellerId || prod.owner || prod.vendor || null;
-
-        // include product snapshot so Orders can render even if products context is missing
         const productSnapshot = {
           _id: productId,
           name: prod.name || prod.title || '',
@@ -86,8 +78,6 @@ const PlaceOrder = () => {
           price,
           seller: sellerId
         };
-        
-        // broaden seller candidate keys (backend product may store seller under different key)
         items.push({
           _id: productId,
           seller: sellerId,
@@ -103,16 +93,15 @@ const PlaceOrder = () => {
 
   const handlePlaceOrder = async () => {
     try {
-      localStorage.setItem('deliveryInfo', JSON.stringify(delivery));
+      localStorage.setItem(deliveryKey, JSON.stringify(formData)); // ✅ deliveryKey 사용
     } catch (e) {}
 
-    // attempt to persist client contact/address if logged in
     try {
       const storedUser = JSON.parse(localStorage.getItem('user') || 'null');
-      const clientId = storedUser?._id;
+      const clientId = storedUser?._id || storedUser?.id;
       const token = localStorage.getItem('token');
       if (clientId && token) {
-        await fetch(`${API_BASE}/api/client/${clientId}`, {
+        await fetch(`${API_BASE}/api/users/client/${clientId}`, { // ✅ /api/users/client/:id
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -120,8 +109,8 @@ const PlaceOrder = () => {
           },
           credentials: 'include',
           body: JSON.stringify({
-            address: [delivery.street, delivery.city, delivery.state, delivery.zipcode, delivery.country].filter(Boolean).join(' '),
-            phone: delivery.phone || ''
+            address: [formData.street, formData.city, formData.state, formData.zipcode, formData.country].filter(Boolean).join(' '),
+            phone: formData.phone || ''
           })
         }).catch(() => {});
       }
@@ -136,11 +125,10 @@ const PlaceOrder = () => {
     const payload = {
       items: itemsArray,
       amount: getCartAmount(),
-      deliveryInfo: delivery,
+      deliveryInfo: formData, // ✅ delivery → formData
       paymentMethod: method
     };
 
-    // POST to backend to create seller-split orders; fallback to local-only if API fails
     let createdOrders = null;
     try {
       const token = localStorage.getItem('token');
@@ -155,22 +143,19 @@ const PlaceOrder = () => {
       console.warn('Order API failed, will persist locally', err);
     }
 
-    // For UI state: create local order entries (use server-created if available)
     if (Array.isArray(createdOrders) && createdOrders.length) {
       createdOrders.forEach(o => placeOrder(o));
     } else {
-      // create a client-side order that will appear in Orders page
       const clientOrder = {
         id: Date.now(),
         items: itemsArray,
         amount: payload.amount,
         date: new Date().toISOString(),
         status: 'pending',
-        deliveryInfo: delivery,
+        deliveryInfo: formData, // ✅ delivery → formData
         paymentMethod: method
       };
       placeOrder(clientOrder);
-      // also store locally in localStorage.orders for Orders page fallback
       try {
         const existing = JSON.parse(localStorage.getItem('orders') || '[]');
         existing.unshift(clientOrder);
@@ -178,7 +163,6 @@ const PlaceOrder = () => {
       } catch (e) {}
     }
 
-    // clear cart
     try {
       if (typeof clearCart === 'function') clearCart();
       else {
@@ -204,20 +188,20 @@ const PlaceOrder = () => {
             <ProductsTitle text1={'DELIVERY'} text2={'INFORMATION'} />
           </div>
           <div className='flex gap-3 mb-3'>
-            <input value={delivery.firstName} onChange={(e)=>handleChange('firstName', e.target.value)} className='border border-gray-300 rounded px-3.5 py-2 w-full' type="text" placeholder='First name'/>
-            <input value={delivery.lastName} onChange={(e)=>handleChange('lastName', e.target.value)} className='border border-gray-300 rounded px-3.5 py-2 w-full' type="text" placeholder='Last name'/>
+            <input name="firstName" value={formData.firstName} onChange={onChangeHandler} className='border border-gray-300 rounded px-3.5 py-2 w-full' type="text" placeholder='First name'/>
+            <input name="lastName" value={formData.lastName} onChange={onChangeHandler} className='border border-gray-300 rounded px-3.5 py-2 w-full' type="text" placeholder='Last name'/>
           </div>
-          <input value={delivery.email} onChange={(e)=>handleChange('email', e.target.value)} className='border border-gray-300 rounded px-3.5 py-2 w-full mb-3' type="email" placeholder='Email address'/>
-          <input value={delivery.street} onChange={(e)=>handleChange('street', e.target.value)} className='border border-gray-300 rounded px-3.5 py-2 w-full mb-3' type="text" placeholder='Street'/>
+          <input name="email" value={formData.email} onChange={onChangeHandler} className='border border-gray-300 rounded px-3.5 py-2 w-full mb-3' type="email" placeholder='Email address'/>
+          <input name="street" value={formData.street} onChange={onChangeHandler} className='border border-gray-300 rounded px-3.5 py-2 w-full mb-3' type="text" placeholder='Street'/>
           <div className='flex gap-3 mb-3'>
-            <input value={delivery.city} onChange={(e)=>handleChange('city', e.target.value)} className='border border-gray-300 rounded px-3.5 py-2 w-full' type="text" placeholder='City'/>
-            <input value={delivery.state} onChange={(e)=>handleChange('state', e.target.value)} className='border border-gray-300 rounded px-3.5 py-2 w-full' type="text" placeholder='State'/>
+            <input name="city" value={formData.city} onChange={onChangeHandler} className='border border-gray-300 rounded px-3.5 py-2 w-full' type="text" placeholder='City'/>
+            <input name="state" value={formData.state} onChange={onChangeHandler} className='border border-gray-300 rounded px-3.5 py-2 w-full' type="text" placeholder='State'/>
           </div>
           <div className='flex gap-3 mb-3'>
-            <input value={delivery.zipcode} onChange={(e)=>handleChange('zipcode', e.target.value)} className='border border-gray-300 rounded px-3.5 py-2 w-full' type="text" placeholder='Zipcode'/>
-            <input value={delivery.country} onChange={(e)=>handleChange('country', e.target.value)} className='border border-gray-300 rounded px-3.5 py-2 w-full' type="text" placeholder='Country'/>
+            <input name="zipcode" value={formData.zipcode} onChange={onChangeHandler} className='border border-gray-300 rounded px-3.5 py-2 w-full' type="text" placeholder='Zipcode'/>
+            <input name="country" value={formData.country} onChange={onChangeHandler} className='border border-gray-300 rounded px-3.5 py-2 w-full' type="text" placeholder='Country'/>
           </div>
-          <input value={delivery.phone} onChange={(e)=>handleChange('phone', e.target.value)} className='border border-gray-300 rounded px-3.5 py-2 w-full mb-3' type="tel" placeholder='Phone'/>
+          <input name="phone" value={formData.phone} onChange={onChangeHandler} className='border border-gray-300 rounded px-3.5 py-2 w-full mb-3' type="tel" placeholder='Phone'/>
         </div>
       </div>
 

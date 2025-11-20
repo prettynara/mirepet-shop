@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Home from './pages/Home';
 import About from './pages/About';
@@ -25,11 +25,18 @@ import SearchBar from './components/SearchBar';
 import SellerProfile from './pages/SellerProfile';
 import ClientProfile from './pages/ClientProfile';
 import ClientList from './pages/ClientList';
+import ClientDetail from './pages/ClientDetail';
 import SellerList from './pages/SellerList';
 import SellerDetail from './pages/SellerDetail';
 import TrackOrder from './pages/TrackOrder';
 import { ToastContainer} from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import axios from 'axios';
+
+const token = localStorage.getItem('token');
+if (token) {
+  axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+}
 
 const App = () => {
   const { role } = useRole(); 
@@ -68,8 +75,8 @@ const App = () => {
         <Route path='/seller-profile' element={<SellerProfile />} />
         <Route path='/seller/:sellerId' element={<SellerProfile />} />
         <Route path='/client-profile' element={<ClientProfile />} />
-        <Route path='/client/:clientId' element={<ClientProfile />} />
         <Route path='/client-list' element={<ClientList />} />
+        <Route path='/client/:id' element={<ClientDetail />} />
         <Route path='/seller-list' element={<SellerList />} />
         <Route path='/seller-detail/:sellerId' element={<SellerDetail />} />
       </Routes>
@@ -77,5 +84,6 @@ const App = () => {
     </div>
   );
 };
+
 
 export default App;

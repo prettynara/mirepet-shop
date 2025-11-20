@@ -20,6 +20,17 @@ const userSchema = new mongoose.Schema(
       enum: ["guest", "client", "seller", "admin"],
       default: "guest",
     },
+    deliveryInfo: {
+      firstName: String,
+      lastName: String,
+      email: String,
+      phone: String,
+      street: String,
+      city: String,
+      state: String,
+      zipcode: String,
+      country: String
+    },
     //new profile fields
     phone: {type: String, default: ''},
     address: {type: String, default: ''},

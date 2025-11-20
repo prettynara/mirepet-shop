@@ -6,8 +6,16 @@ import userModel from './../models/userModel.js';
 import { sendEmail } from '../utils/email.js';
 
 
-const createToken = (id, role) =>{
-    return jwt.sign({id, role},process.env.JWT_SECRET, {expiresIn: "7d"})
+const createToken = (userId, role) => {
+  return jwt.sign(
+    { 
+      userId: userId, 
+      id: userId,     
+      role: role 
+    }, 
+    process.env.JWT_SECRET, 
+    { expiresIn: '7d' }
+  );
 }
 
 // Route for user login (client + seller + admin)
@@ -23,12 +31,21 @@ const loginUser = async (req,res) => {
           .json({success:false, message:"Please provide email and password"})
          }
 
-        // ✅ 1️⃣ .env의 ADMIN 계정 로그인 확인
+        //.env의 ADMIN 계정 로그인 확인
          if (email === process.env.ADMIN_EMAIL && password === process.env.ADMIN_PASSWORD) {
             let adminUser = await userModel.findOne({ email, role: "admin" });
             if (adminUser) {
             const token = createToken(adminUser._id.toString(), "admin");   
-            return res.json({ success: true, token, role: 'admin', name: 'Administrator', message: 'Admin login success'})   
+            return res.json({ 
+                success: true, 
+                token, 
+                role: 'admin', 
+                name: 'Administrator',
+                _id: adminUser._id.toString(), 
+                id: adminUser._id.toString(), 
+                email: adminUser.email,
+                message: 'Admin login success'
+              });    
             }
             // fallback : sign with fixed id (legacy)
             const token = createToken('admin_fixed_id', 'admin');
@@ -37,6 +54,9 @@ const loginUser = async (req,res) => {
             token,
             role: "admin",
             name: "Administrator",
+            _id: 'admin_fixed_id',
+            id: 'admin_fixed_id',
+            email: process.env.ADMIN_EMAIL,
             message: "Admin login success",
         });
         }
@@ -61,7 +81,16 @@ const loginUser = async (req,res) => {
         const token = createToken(user._id.toString(), user.role)
         
         // client / seller/ admin 구분
-        return res.json({success:true, token, role:user.role, name:user.name, message:"Login successful",})
+          return res.json({
+          success:true, 
+          token, 
+          role:user.role, 
+          name:user.name,
+          _id: user._id.toString(),
+          id: user._id.toString(), 
+          email: user.email, 
+          message:"Login successful",
+        });
         
     } catch (error) {
         console.log("Login Error:",error);
@@ -233,24 +262,40 @@ const updateClient = async (req, res) => {
     console.log('updateClient body:', req.body);
     
     // require auth middleware to have attached req.user
-    if (!req.user) return res.status(401).json({ success: false, message: 'Not authenticated' });
+    if (!req.user) {
+      console.warn('updateClient - no req.user');
+      return res.status(401).json({ success: false, message: 'Not authenticated' });
+    }
     if (req.user.id !== id && req.user.role !== 'admin') {
+      console.warn('updateClient - forbidden', { userId: req.user.id, targetId: id, role: req.user.role });
       return res.status(403).json({ success: false, message: 'Forbidden' });
     }
 
     const allowed = ['name', 'phone', 'address', 'pets'];
     const updates = {};
     for (const key of allowed) {
-      if (typeof req.body[key] !== 'undefined') updates[key] = req.body[key];
+      if (typeof req.body[key] !== 'undefined') {
+        updates[key] = req.body[key];
+        console.log(`updateClient: setting ${key}:`, req.body[key])
     }
+  }
+
+  console.log(' updateClient: final updates:', updates);
 
     const updated = await userModel.findByIdAndUpdate(
       id,
       { $set: updates },
       { new: true, runValidators: true }
     ).select('-password -resetPasswordToken -resetPasswordExpire');
-    if (!updated) return res.status(404).json({ success: false, message: 'Client not found' });
+
+    if (!updated) {
+      console.warn('updateClient: User not found', id);
+      return res.status(404).json({ success: false, message: 'Client not found' });
+    }
+
     console.log('updateClient success:', updated._id.toString());
+    console.log('updateClient pets:', updated.pets);
+
     return res.json({ success: true, message: 'Profile updated', client: updated });
   } catch (err) {
     console.error('updateClient error:', err);
@@ -258,7 +303,7 @@ const updateClient = async (req, res) => {
   }
 };
 
-export const logoutUser = (req, res) => {
+const logoutUser = (req, res) => {
   try {
     // 클라이언트가 httpOnly cookie로 토큰을 받는 경우 제거
     res.clearCookie('token', {
@@ -273,4 +318,72 @@ export const logoutUser = (req, res) => {
   }
 };
 
-export { loginUser, registerUser, adminLogin, forgotPassword, resetPassword, me, getClient, updateClient }
+ const getMyDeliveryInfo = async (req, res) => {
+  try {
+    if (!req.user) return res.status(401).json({ success: false, message: 'Not authenticated' });
+    const user = await userModel.findById(req.user.id).select('deliveryInfo').lean();
+    return res.json({ success: true, deliveryInfo: user?.deliveryInfo || null });
+  } catch (err) {
+    console.error('getMyDeliveryInfo error', err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+ const updateMyDeliveryInfo = async (req, res) => {
+  try {
+    if (!req.user) return res.status(401).json({ success: false, message: 'Not authenticated' });
+    const { firstName, lastName, email, phone, street, city, state, zipcode, country } = req.body;
+    const user = await userModel.findById(req.user.id);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+    user.deliveryInfo = { firstName, lastName, email, phone, street, city, state, zipcode, country };
+    await user.save();
+
+    return res.json({ success: true, deliveryInfo: user.deliveryInfo });
+  } catch (err) {
+    console.error('updateMyDeliveryInfo error', err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+const getAllClients = async (req, res) => {
+  try {
+    if (!req.user) return res.status(401).json({ success: false, message: 'Not authenticated' });
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Forbidden: Admin only' });
+    }
+
+    const clients = await userModel
+      .find({ role: 'client' })
+      .select('-password -resetPasswordToken -resetPasswordExpire')
+      .sort({ createdAt: -1 });
+
+    console.log('getAllClients: found', clients.length, 'clients');
+    return res.json({ success: true, clients });
+  } catch (err) {
+    console.error('getAllClients error:', err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Delete client (admin only)
+const deleteClient = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!req.user) return res.status(401).json({ success: false, message: 'Not authenticated' });
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Forbidden: Admin only' });
+    }
+
+    const deleted = await userModel.findByIdAndDelete(id);
+    if (!deleted) return res.status(404).json({ success: false, message: 'Client not found' });
+
+    console.log('deleteClient success:', id);
+    return res.json({ success: true, message: 'Client deleted' });
+  } catch (err) {
+    console.error('deleteClient error:', err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+export { loginUser, registerUser, adminLogin, forgotPassword, resetPassword, me, getClient, updateClient, logoutUser, getMyDeliveryInfo, updateMyDeliveryInfo, getAllClients, deleteClient }

@@ -37,18 +37,25 @@ const CustomerInfo = () => {
       photo: '' // optional: can be filled later in profile
     }));
 
+    console.log('Final pets data:', finalPets);
+
     try {
       // get client id and token
       let clientId = null;
       try {
         const stored = JSON.parse(localStorage.getItem('user'));
         if (stored && stored._id) clientId = stored._id;
-      } catch (err) { /* ignore */ }
+        console.log('clientId from localStorage:', clientId);
+      } catch (err) { 
+        console.warn('Failed to parse user from localStorage', err);
+      }
 
       // fallback: call /api/me if no user in localStorage
       if (!clientId) {
         const token = localStorage.getItem('token');
-        const meRes = await fetch(`${API_BASE}/api/me`, {
+        console.log('Token:', token ? 'exists' : 'missing');
+
+        const meRes = await fetch(`${API_BASE}/api/users/me`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -56,23 +63,35 @@ const CustomerInfo = () => {
           },
           credentials: 'include'
         });
+        console.log('/api/users/me response stauts:', meRes.status);
+
         if (meRes.ok) {
           const meData = await meRes.json();
+          console.log('/api/users/me response:', meData);
+
           if (meData?.user?._id) {
             clientId = meData.user._id;
             localStorage.setItem('user', JSON.stringify(meData.user));
+            console.log('clientId from /api/users/me:', clientId);
           }
+        } else {
+          const errorData = await meRes.json().catch(() => null);
+          console.error('/api/users/me failed:', meRes.status, errorData);
         }
       }
 
       if (!clientId) {
         alert('Unable to determine user. Please login and try again.');
+        navigate('/login');
         return;
       }
 
       const token = localStorage.getItem('token');
 
-      const res = await fetch(`${API_BASE}/api/client/${clientId}`, {
+      console.log(' Sending pet data to /api/users/client/' + clientId);
+      console.log(' Payload:', {pets:finalPets});
+
+      const res = await fetch(`${API_BASE}/api/users/client/${clientId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -82,12 +101,15 @@ const CustomerInfo = () => {
         body: JSON.stringify({ pets: finalPets })
       });
 
+      console.log(' Response status:', res.status);
       const data = await res.json().catch(() => null);
+      console.log(' Response data:', data);
 
       if (res.ok && data?.success) {
         // update local user cache if server returned updated client
         if (data.client) {
           localStorage.setItem('user', JSON.stringify(data.client));
+          console.log('Updated localStorage with pets:', data.client.pets);
         }
         alert('Pet information saved.');
         navigate('/');

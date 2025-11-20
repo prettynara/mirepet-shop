@@ -71,19 +71,44 @@ const createOrder = async (req, res) => {
     const paymentMethod = body.paymentMethod || 'cod';
     const clientId = req.user?.id || body.clientId || null;
 
+    console.debug('=== createOrder START ===');
+    console.debug('createOrder req.user:', req.user);
+    console.debug('createOrder clientId:', clientId);
+    console.debug('createOrder items count:', items.length);
+
     if (!items.length) return res.status(400).json({ success: false, message: 'No items' });
 
     const bySeller = {};
     for (const it of items) {
-      const sellerId = it.seller || it.product?.seller || it.sellerId || null;
+            const sellerId = 
+        it.seller || 
+        it.product?.seller || 
+        it.productSnapshot?.seller || 
+        it.sellerId || 
+        it._seller || 
+        null;
+
+      console.debug('createOrder: item seller extraction:', {
+        'it.seller': it.seller,
+        'it.product?.seller': it.product?.seller,
+        'it.productSnapshot?.seller': it.productSnapshot?.seller,
+        'final sellerId': sellerId
+      })
+      
       const sid = sellerId ? String(sellerId) : 'unknown';
       if (!bySeller[sid]) bySeller[sid] = [];
       bySeller[sid].push(it);
     }
 
+    console.debug('createOrder: grouped by', Object.keys(bySeller).length, 'sellers');
+
     const created = [];
     for (const sid of Object.keys(bySeller)) {
-      if (sid === 'unknown') continue;
+      if (sid === 'unknown') {
+        console.warn('createOrder: skipping unknown seller');
+        continue;
+      }
+      
       const sellerItems = bySeller[sid];
 
       // build items with product snapshot from DB (best-effort)
@@ -93,12 +118,23 @@ const createOrder = async (req, res) => {
          if (pid && mongoose.Types.ObjectId.isValid(String(pid))) {
            try {
              const p = await productModel.findById(pid).lean();
-             if (p) snapshot = { _id: p._id, name: p.name, image: p.image || [], options: p.options || [], price: p.price || (p.options?.[0]?.price) || 0, seller: p.seller };
-           } catch (e) { /* ignore */ }
+             if (p) {
+               snapshot = { 
+                 _id: p._id, 
+                 name: p.name, 
+                 image: p.image || [], 
+                 options: p.options || [], 
+                 price: p.price || (p.options?.[0]?.price) || 0, 
+                 seller: p.seller 
+               };
+             }
+           } catch (e) {
+            console.debug('createOrder: failed to fetch product', pid, e?.message);
+            }          
          }
          return {
            product: pid,
-           productSnapshot: snapshot,
+           productSnapshot: snapshot || si.product || si.productSnapshot || null,
            option: si.option || {},
            quantity: Number(si.quantity || 1),
            price: Number(si.price || (snapshot?.price) || 0),
@@ -108,21 +144,30 @@ const createOrder = async (req, res) => {
       const amount = typeof body.amount === 'number'
         ? body.amount
         : sellerItems.reduce((acc, it) => acc + (Number(it.price || 0) * Number(it.quantity || 1)), 0);
-      const doc = await order.create({
+      
+      const orderData = {
         seller: sid,
-        client: clientId,
+        client: clientId, 
         items: itemsWithSnapshot,
         amount,
         status: 'new',
         deliveryInfo,
         paymentMethod,
-      });
+      };
+
+      console.debug('createOrder: creating order for seller', sid, 'with client:', clientId); // ✅ 디버깅
+      const doc = await order.create(orderData);
+      console.debug('createOrder: ✅ created order', doc._id.toString(), 'client:', doc.client); // ✅ 디버깅
       created.push(doc);
     }
+
+    console.debug('createOrder: ✅ total created:', created.length, 'orders');
+    console.debug('=== createOrder END ===');
 
     return res.status(201).json({ success: true, orders: created });
   } catch (err) {
     console.error('createOrder error', err);
+    console.error('createOrder ❌ stack:', err.stack);
     return res.status(500).json({ success: false, message: err.message });
   }
 };
@@ -206,51 +251,61 @@ const getOrderById = async (req, res) => {
 // PUT /api/orders/:id/assign-courier
 const assignCourier = async (req, res) => {
   try {
+    console.debug('assignCourier called, user=', req.user?.id, 'body=', req.body);
     if (!req.user) return res.status(401).json({ success: false, message: 'Not authenticated' });
     const { id } = req.params;
-    const { courier, trackingNumber, service, driver, eta } = req.body;
+    const { courier, trackingNumber, driver, driverName, driverPhone } = req.body;
     if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ success: false, message: 'Invalid id' });
 
     const doc = await order.findById(id);
     if (!doc) return res.status(404).json({ success: false, message: 'Order not found' });
-    // only seller who owns order or admin can assign courier
+
+    // authorization
     if (String(doc.seller) !== String(req.user.id) && req.user.role !== 'admin') {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
-    doc.tracking = doc.tracking || {};
-    if (courier) doc.tracking.courier = courier;
-    if (trackingNumber) doc.tracking.trackingNumber = trackingNumber;
-    if (service) doc.tracking.service = service;
-    if (typeof driver === 'object' && driver !== null) {
+    // ensure tracking object exists
+    if (!doc.tracking) doc.tracking = {};
+
+    if (typeof courier === 'string') doc.tracking.courier = courier;
+    if (typeof trackingNumber === 'string') doc.tracking.trackingNumber = trackingNumber;
+
+    // driver can be provided as object or flat fields
+    if (driver && typeof driver === 'object') {
       doc.tracking.driver = {
         id: driver.id || doc.tracking.driver?.id,
-        name: driver.name || doc.tracking.driver?.name,
-        phone: driver.phone || doc.tracking.driver?.phone,
+        name: driver.name || doc.tracking.driver?.name || '',
+        phone: driver.phone || doc.tracking.driver?.phone || ''
       };
-    } else {
-      if (req.body.driverName) doc.tracking.driver = { name: req.body.driverName, phone: req.body.driverPhone || '' };
+    } else if (driverName || driverPhone) {
+      doc.tracking.driver = {
+        name: driverName || doc.tracking.driver?.name || '',
+        phone: driverPhone || doc.tracking.driver?.phone || ''
+      };
     }
-    if (eta) doc.tracking.eta = eta;
+
+    // push minimal history
     doc.tracking.history = doc.tracking.history || [];
     doc.tracking.history.push({ status: doc.status || 'assigned', at: new Date(), note: 'courier/driver assigned' });
 
-    await doc.save();
+    // ensure mongoose detects nested changes
+    doc.markModified && doc.markModified('tracking');
 
+    await doc.save();
     const updated = await order.findById(id)
       .populate({ path: 'items.product', model: productModel.modelName, select: 'name image images imageUrl options price' })
       .lean();
 
-     // real-time notify clients viewing this order
+    // emit realtime update if io available
     try {
       const io = req.app?.get('io');
-      if (io) {
-        io.to(`order:${id}`).emit('order:update', updated);
-      }
+      if (io) io.to(`order:${id}`).emit('order:update', updated);
     } catch (e) {
       console.debug('assignCourier: socket emit failed', e?.message || e);
     }
 
+    console.debug('assignCourier saved, orderId=', id, 'tracking=', updated.tracking);
     return res.json({ success: true, order: updated });
   } catch (err) {
     console.error('assignCourier error', err);

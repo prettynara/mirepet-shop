@@ -1,13 +1,52 @@
-import React, { useState } from "react";
-import { clients, assets } from "../assets/assets";
+import React, { useState, useEffect } from "react";
+import { assets } from "../assets/assets";
 import { useNavigate } from "react-router-dom";
 import ProductsTitle from "../components/ProductsTitle";
+
+const API_BASE = 'http://localhost:4000';
 
 const ClientList = ({userRole = "admin"}) => {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [sortType, setSortType] = useState("name");
-  const [filteredClients, setFilteredClients] = useState(clients);
+  const [clients, setClients] = useState([]);
+  const [filteredClients, setFilteredClients] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // 백엔드에서 클라이언트 목록 가져오기
+  useEffect(() => {
+    const fetchClients = async () => {
+      try {
+        setLoading(true);
+        const token = localStorage.getItem('token');
+
+        const res = await fetch(`${API_BASE}/api/users/clients`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          },
+          credentials: 'include'
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          console.log('Clients data:', data);
+
+          const clientList = data.clients || data || [];
+          setClients(clientList);
+          setFilteredClients(clientList);
+        } else {
+          console.error('Failed to fetch clients:', res.status);
+        }
+      } catch (err) {
+        console.error('Error fetching clients:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchClients();
+  }, [])
 
   // 검색 처리
   const handleSearch = (e) => {
@@ -32,18 +71,42 @@ const ClientList = ({userRole = "admin"}) => {
   };
 
   // Admin 삭제 기능
-  const handleDelete = (e, clientId) => {
+  const handleDelete = async (e, clientId) => {
     e.stopPropagation();
-    if (window.confirm("Are you sure you want to delete this client?")) {
-      // backend 연결시 axios.delete(`/api/clients/${clientId}`) 등으로 변경
-      alert(`client ${clientId} deleted`);
-      setFilteredClients(filteredClients.filter((c) => c._id !== clientId));
+    if (!window.confirm("Are you sure you want to delete this client?")) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE}/api/users/client/${clientId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        credentials: 'include'        
+      });
+
+      if (res.ok) {
+        alert(`Client ${clientId} deleted succesfully.`);
+        setClients(clients.filter(c => c._id !== clientId));
+        setFilteredClients(filteredClients.filter(c => c._id !== clientId));
+      } else {
+        const data = await res.json();
+        alert(data?.message || 'Failed to delete client');
+      }
+    } catch (err) {
+      console.error('Delete error:', err);
+      alert('Failed to delete client');
     }
   };
 
   const handleClientClick = (clientId) => {
     navigate(`/client/${clientId}`);
   };
+
+  if (loading) {
+    return <p className="text-center mt-20 text-gray-600"> Loading clients...</p>
+  }
 
   return (
     <div className="min-h-screen bg-blue-50/30 p-8">
@@ -92,7 +155,7 @@ const ClientList = ({userRole = "admin"}) => {
               <p className="text-gray-500">Address: {client.address}</p>
             </div>
 
-            {client.pets.length > 0 && (
+            {client.pets && client.pets.length > 0 && (
               <div className="mt-4">
                 <h3 className="text-lg font-medium text-gray-700 mb-3">Pets</h3>
                 <div className="flex flex-wrap gap-4 justify-center">
@@ -100,7 +163,7 @@ const ClientList = ({userRole = "admin"}) => {
                     <div key={index} className="flex flex-col items-center">
                       <div className="relative w-24 h-24 bg-blue-50 flex justify-center items-center rounded-full border-4 border-white shadow-md overflow-hidden">
                         <img
-                          src={pet.photo ? pet.photo : assets.profile_icon}
+                          src={pet.photo || assets.profile_icon}
                           alt={pet.name}
                           className="w-full h-full object-cover rounded-full"
                         />
