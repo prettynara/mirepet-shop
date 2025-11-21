@@ -16,8 +16,25 @@ const orderSchema = new mongoose.Schema({
   status: { type: String, default: 'new' }, // new / pending / ready / out-for-delivery / delivered / cancelled
   deliveryInfo: { type: Object },
   paymentMethod: { type: String, default: 'cod' },
-  date: { type: Date, default: Date.now }
+  date: { type: Date, default: Date.now },
+  tracking: {
+    courier: { type: String, default: '' },
+    trackingNumber: { type: String, default: '' },
+    driver: {
+      name: { type: String, default: '' },
+      phone: { type: String, default: '' }
+    },
+    history: [{
+      status: String,
+      at: Date,
+      note: String,
+      courier: String,
+      trackingNumber: String
+    }],
+    lastUpdated: { type: Date, default: Date.now }
+  }
 }, { timestamps: true });
 
-const order = mongoose.model('order', orderSchema);
+
+const order = mongoose.models.order || mongoose.model('order', orderSchema);
 export default order;

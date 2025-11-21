@@ -4,6 +4,10 @@ import authMiddleware from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
+router.use((req, res, next) => {
+    console.debug(' Order route:', req.method, req.path, 'body:', req.body);
+    next();
+});
 
 router.post('/', authMiddleware, createOrder); // allow guest orders as well
 router.get('/mine', authMiddleware, getMyOrders);

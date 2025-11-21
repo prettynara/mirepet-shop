@@ -9,16 +9,17 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 const SellerNavbar = () => {
   const [visible, setVisible] = useState(false);
   const [user, setUser] = useState(null);
-  const navigate = useNavigate();
+  const [orderCount, setOrderCount] = useState(0);
+  const navigate = useNavigate(); 
 
   const { setRole } = useRole();
   
-    //Importing petshop name
+    //셀러 정보 가져오기
   useEffect(() => {
     const load = async () => {
       try {
         const token = localStorage.getItem('token');
-        const res = await fetch(`${API_BASE}/api/me`, {
+        const res = await fetch(`${API_BASE}/api/users/me`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -28,10 +29,11 @@ const SellerNavbar = () => {
         });
         const data = await res.json().catch(() => null);
         const u = data?.user || data;
-        // always set user when /api/me returns an object (don't require petshopName)
+
         if (u && u.petshopName) {
           setUser(u);
-          try { localStorage.setItem('user', JSON.stringify(u)); } catch (e) {/* ignore */ }
+          try { localStorage.setItem('user', JSON.stringify(u)); 
+          } catch (e) {/* ignore */ }
         } else {
           setUser(null);
         }
@@ -42,9 +44,44 @@ const SellerNavbar = () => {
     load();
 }, []);
 
+  // 미처리 주문 개수 가져오기 (실시간 폴링)
+  useEffect(() => {
+    if (!user || !user._id) return;
+
+    const loadCount = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_BASE}/api/orders/mine/count`, {
+          headers: { 
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}) 
+          },
+          credentials: 'include'
+        });
+        const data = await res.json().catch(() => null);
+        
+        if (res.ok && data?.count >= 0) {
+          setOrderCount(data.count);
+          console.log(`✅ Seller order count: ${data.count}`); // ✅ 디버깅
+        }
+      } catch (e) {
+        console.debug('❌ load seller order count failed', e);
+      }
+    };
+
+    loadCount(); // 초기 로드
+
+    //  10초마다 주문 개수 갱신 (실시간 폴링)
+    const interval = setInterval(loadCount, 10000);
+    return () => clearInterval(interval);
+  }, [user]);
+
   const handleLogout = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/logout`, { method: 'POST', credentials: 'include' });
+      const res = await fetch(`${API_BASE}/api/users/logout`, { 
+        method: 'POST', 
+        credentials: 'include' 
+      });
       // ignore logout 404 (server might not implement /api/logout)
       if (!res.ok && res.status !== 404) {
         console.warn('Logout returned', res.status);
@@ -59,26 +96,6 @@ const SellerNavbar = () => {
   };
 
   const petshopName = user?.petshopName || 'Seller';
-
-  const [orderCount, setOrderCount] = useState(0);
-  
-  useEffect(() => {
-    if (!user || !user._id) return;
-    const loadCount = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        const res = await fetch(`${API_BASE}/api/orders/mine/count`, {
-          headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-          credentials: 'include'
-        });
-        const data = await res.json().catch(() => null);
-        if (res.ok && data?.count >= 0) setOrderCount(data.count);
-      } catch (e) {
-        console.debug('load seller order count failed', e);
-      }
-    };
-    loadCount();
-  }, [user]);
 
   return (
       <div className="fixed top-0 left-0 w-full bg-white/90 backdrop-blur-md shadow-md z-30">
@@ -139,12 +156,15 @@ const SellerNavbar = () => {
             <Link to='/myorders' className='relative'>
                 <img src={assets.neworder_icon} className='w-8 min-w-5' alt=""/>
                  {orderCount > 0 ? (
-                  <p className='absolute -top-2 -right-2 min-w-[20px] h-5 px-1 flex items-center justify-center bg-blue-600 text-white text-xs rounded-full'>{orderCount}</p>
+                  <p className='absolute -top-2 -right-2 min-w-[20px] h-5 px-1 flex items-center justify-center bg-blue-600 text-white text-xs rounded-full font-semibold'>
+                    {orderCount}
+                    </p>
                 ) : (
-                  <p className='absolute -top-2 -right-2 w-5 h-5 flex items-center justify-center bg-blue-600 text-white text-xs rounded-full'>0</p>
+                  <p className='absolute -top-2 -right-2 w-5 h-5 flex items-center justify-center bg-blue-600 text-white text-xs rounded-full'>
+                    0
+                    </p>
                 )}
                 </Link>
-  
           </div>
 
           {/* Mobile Menu Button */}

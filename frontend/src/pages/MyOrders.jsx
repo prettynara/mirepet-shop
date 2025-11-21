@@ -20,8 +20,9 @@ const MyOrders = () => {
   const [courierForms, setCourierForms] = useState({});
   const [savingIds, setSavingIds] = useState(new Set());
 
-  const fetchOrders = async () => {
-    setLoading(true);
+  const fetchOrders = async (preserveForms = false) => {
+    if (!preserveForms) setLoading(true);
+
     try {
       const token = localStorage.getItem('token');
       const res = await axios.get(`${API_BASE}/api/orders/mine`, {
@@ -29,7 +30,9 @@ const MyOrders = () => {
         withCredentials: true,
       });
       setOrders(res.data?.orders || []);
-      // init forms from returned orders
+
+      // preserveForms=true면 기존 입력값 유지
+      if (!preserveForms) {
       const forms = {};
       (res.data?.orders || []).forEach(o => {
         forms[String(o._id)] = {
@@ -40,15 +43,40 @@ const MyOrders = () => {
         };
       });
       setCourierForms(forms);
+    } else {
+      // 서버 데이터로 업데이트하되, 사용자가 입력 중인 필드는 보존
+      setCourierForms(prev => {
+        const updated = { ...prev};
+        (res.data?.orders || []).forEach(o => {
+          const id = String(o._id);
+          const existing = prev[id] || {};
+
+          // 입력값이 없는 필드만 서버 데이터로 채움
+          updated[id] = {
+            courier: existing.courier || o.tracking?.courier || '',
+            trackingNumber: existing.trackingNumber || o.tracking?.trackingNumber || '',
+            driverName: existing.driverName || o.tracking?.driver?.name || '',
+            driverPhone: existing.driverPhone || o.tracking?.driver?.phone || '',
+          };
+          });
+          return updated;
+        });
+      }
     } catch (e) {
       console.error('Failed to load seller orders', e?.response?.data || e.message);
-      setOrders([]);
+      if (!preserveForms) setOrders([]);
     } finally {
-      setLoading(false);
+      if (!preserveForms) setLoading(false);
     }
   };
 
-  useEffect(() => { fetchOrders(); }, []);
+  useEffect(() => { 
+    fetchOrders(false); 
+
+    // 10초마다 자동 갱신(실시간 폴링)
+    const interval = setInterval(() => fetchOrders(true), 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleCourierInput = (orderId, field, value) => {
     setCourierForms(prev => ({ ...prev, [orderId]: { ...(prev[orderId] || {}), [field]: value } }));
@@ -56,23 +84,76 @@ const MyOrders = () => {
 
   const handleAssignCourier = async (orderId) => {
     const form = courierForms[orderId] || {};
+
+    // 빈 값 제출 방지
+    if (!form.courier && !form.trackingNumber && !form.driverName && !form.driverPhone) {
+      alert('Please enter at least one field (courier, tracking, or driver info)');
+      return;
+    }
+
     setSavingIds(s => new Set([...s, orderId]));
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.put(`${API_BASE}/api/orders/${orderId}/assign-courier`, {
-        courier: form.courier,
-        trackingNumber: form.trackingNumber,
-        driver: { name: form.driverName, phone: form.driverPhone },
-      }, {
-        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+
+    console.log('🔄 Sending courier info:', {
+      orderId,
+      courier: form.courier,
+      trackingNumber: form.trackingNumber,
+      driver: {
+        name: form.driverName,
+        phone: form.driverPhone
+      }
+    });
+
+      const res = await axios.put(
+        `${API_BASE}/api/orders/${orderId}/assign-courier`, 
+        {
+        courier: form.courier || '',
+        trackingNumber: form.trackingNumber || '',
+        driver: { 
+          name: form.driverName || '', 
+          phone: form.driverPhone || '' 
+        },
+      },    
+      {
+        headers: { 
+          'Content-Type': 'application/json', 
+          ...(token ? { Authorization: `Bearer ${token}` } : {}) 
+        },
         withCredentials: true
       });
+
+      console.log('Server response:', res.data);
+
       const updated = res.data?.order;
-      if (updated) setOrders(prev => prev.map(o => (String(o._id) === String(orderId) ? updated : o)));
-      alert('Courier/driver assigned.');
+      if (!updated) {
+        console.error('No order returned from server:', res.data);
+        alert('Server did not return updated order. Please refresh and try again.');
+        return;
+      }
+
+      // 주문 목록 업데이트
+        setOrders(prev => prev.map(o => (String(o._id) === String(orderId) ? updated : o)));
+       
+        // 저장 후 해당 주문 폼만 서버 데이터로 업데이트
+        setCourierForms(prev => ({
+          ...prev,
+          [orderId]: {
+            courier: updated.tracking?.courier || '',
+            trackingNumber: updated.tracking?.trackingNumber || '',
+            driverName: updated.tracking?.driver?.name || '',
+            driverPhone: updated.tracking?.driver?.phone || '',
+          }
+        }));
+        
+        console.log('Courier info saved:', updated.tracking);
+        alert('Courier/driver info saved successfully');
     } catch (err) {
-      console.error('Failed to assign courier', err?.response?.data || err?.message);
-      alert('Failed to assign courier.');
+    console.error(' Failed to assign courier:', err);
+    console.error(' Response data:', err?.response?.data);
+    console.error(' Status:', err?.response?.status);
+    
+    alert(` Failed to save: ${err?.response?.data?.message || err.message || 'Unknown error'}`);
     } finally {
       setSavingIds(s => {
         const ns = new Set(s);
@@ -90,10 +171,14 @@ const MyOrders = () => {
         headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         withCredentials: true,
       });
+
       // replace the updated order in state with server-returned order (populated)
       const updated = res.data?.order;
       if (updated) {
         setOrders(prevOrders => prevOrders.map(o => (String(o._id) === String(orderId) ? updated : o)));
+      
+      // 상태 변경 후 주문 목록 갱신(폼 데이터 보존))
+        fetchOrders(true);
       } else {
         // optimistic fallback
         setOrders(prevOrders => prevOrders.map(o => (String(o._id) === String(orderId) ? { ...o, status: newStatus } : o)));
@@ -135,13 +220,18 @@ const MyOrders = () => {
                       <div className="font-semibold">#{id.slice(-8)}</div>
                       <div className="text-xs text-gray-400">{new Date(order.date || order.createdAt).toLocaleString()}</div>
                     </div>
-                    <div className={`px-3 py-1 rounded-full text-sm font-semibold bg-gray-50 text-gray-700`}>
+                    <div className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                      order.status === 'new' ? 'bg-blue-100 text-blue-800' :
+                      order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                      order.status === 'delivered' ? 'bg-green-100 text-green-800' :
+                      'bg-gray-50 text-gray-700'
+                    }`}>
                       {order.status}
                     </div>
                   </div>
                   <div className="mt-3 text-sm text-gray-600">
                     <div>Items: <span className="font-medium">{(order.items || []).reduce((s, it) => s + (it.quantity || 1), 0)}</span></div>
-                    <div className="mt-1">Amount: <span className="font-semibold">{order.currency || '$'}{order.amount}</span></div>
+                    <div className="mt-1">Amount: <span className="font-semibold">{order.currency || 'TND'}{order.amount}</span></div>
                   </div>
                 </div>
               </div>

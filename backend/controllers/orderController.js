@@ -38,7 +38,16 @@ const getClientOrders = async (req, res) => {
     const orders = await order
       .find(query)
       .sort({ createdAt: -1 })
-      .populate({ path: 'items.product', model: productModel.modelName, select: 'name image images imageUrl options price' })
+      .populate({ 
+        path: 'items.product', 
+        model: productModel.modelName, 
+        select: 'name image images imageUrl options price' 
+      })
+      .populate({
+        path: 'seller',
+        model: User.modelName,
+        select: 'petshopNamee logo name email phone address'        
+      })
       .lean();
 
     // debug: show how many orders matched and a small sample (helps diagnose empty result)
@@ -195,7 +204,12 @@ const getMyOrdersCount = async (req, res) => {
   try {
     if (!req.user) return res.status(401).json({ success: false, message: 'Not authenticated' });
     const sellerId = req.user.id;
-    const count = await order.countDocuments({ seller: sellerId, status: { $in: ['new', 'pending'] } });
+    const count = await order.countDocuments({ 
+      seller: sellerId, 
+      status: { $in: ['new', 'pending'] } 
+    });
+
+    console.log(`getMyOrdersCount: seller=${sellerId}, count=${count}`);
     return res.json({ success: true, count });
   } catch (err) {
     console.error('getMyOrdersCount error', err);
@@ -237,7 +251,16 @@ const getOrderById = async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ success: false, message: 'Invalid id' });
 
     const ord = await order.findById(id)
-      .populate({ path: 'items.product', model: productModel.modelName, select: 'name image images imageUrl options price' })
+      .populate({ 
+        path: 'items.product', 
+        model: productModel.modelName, 
+        select: 'name image images imageUrl options price' 
+      })
+      .populate({
+        path: 'seller',
+        model: User.modelName,
+        select: 'petshopName logo name email phone address'        
+      })
       .lean();
 
     if (!ord) return res.status(404).json({ success: false, message: 'Order not found' });
@@ -253,65 +276,109 @@ const assignCourier = async (req, res) => {
   try {
     console.debug('assignCourier called, user=', req.user?.id, 'body=', req.body);
     if (!req.user) return res.status(401).json({ success: false, message: 'Not authenticated' });
+    
     const { id } = req.params;
     const { courier, trackingNumber, driver, driverName, driverPhone } = req.body;
-    if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ success: false, message: 'Invalid id' });
+    
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      console.error('Invalid order ID:', id)
+      return res.status(400).json({ success: false, message: 'Invalid id' });
+    }
 
     const doc = await order.findById(id);
-    if (!doc) return res.status(404).json({ success: false, message: 'Order not found' });
+    if (!doc) {
+      console.error('Order not found:', id);
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    console.debug('✅ Order found:', {
+      _id: doc._id.toString(),
+      seller: doc.seller?.toString(),
+      status: doc.status,
+      tracking: doc.tracking
+    });
 
     // authorization
     if (String(doc.seller) !== String(req.user.id) && req.user.role !== 'admin') {
+      console.error('Not authorized: seller=', doc.seller, 'user=', req.user.id);
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
     // ensure tracking object exists
-    if (!doc.tracking) doc.tracking = {};
-
-    if (typeof courier === 'string') doc.tracking.courier = courier;
-    if (typeof trackingNumber === 'string') doc.tracking.trackingNumber = trackingNumber;
-
-    // driver can be provided as object or flat fields
-    if (driver && typeof driver === 'object') {
-      doc.tracking.driver = {
-        id: driver.id || doc.tracking.driver?.id,
-        name: driver.name || doc.tracking.driver?.name || '',
-        phone: driver.phone || doc.tracking.driver?.phone || ''
-      };
-    } else if (driverName || driverPhone) {
-      doc.tracking.driver = {
-        name: driverName || doc.tracking.driver?.name || '',
-        phone: driverPhone || doc.tracking.driver?.phone || ''
-      };
+    if (!doc.tracking) {
+      console.debug('Creating new tacking object');
+      doc.tracking = {};
     }
 
-    // push minimal history
+    // 배송 정보 업데이트(빈 값도 허용하여 seller가 수정 가능하도록)
+    doc.tracking.courier = courier || doc.tracking.courier || '';
+    doc.tracking.trackingNumber = trackingNumber || doc.tracking.trackingNumber || '';
+
+    // 운전자 정보 업데이트(빈 값도 허용)
+    if (!doc.tracking.driver) doc.tracking.driver = {};
+
+    if (driver && typeof driver === 'object') {
+      doc.tracking.driver.name = driver.name || doc.tracking.driver.name || '';
+      doc.tracking.driver.phone = driver.phone || doc.tracking.driver.phone || '';
+    } else {
+      if (typeof driverName !== 'undefined') doc.tracking.driver.name = driverName || '';
+      if (typeof driverPhone !== 'undefined') doc.tracking.driver.phone = driverPhone || '';
+    }
+
+    // push history with timestamp
     doc.tracking.history = doc.tracking.history || [];
-    doc.tracking.history.push({ status: doc.status || 'assigned', at: new Date(), note: 'courier/driver assigned' });
+    doc.tracking.history.push({ 
+      status: doc.status || 'assigned', 
+      at: new Date(), 
+      note: 'courier/driver info updated',
+      courier: doc.tracking.courier,
+      trackingNumber: doc.tracking.trackingNumber
+    });
+
+    // 마지막 업데이트 시간 기록
+    doc.tracking.lastUpdated = new Date();
 
     // ensure mongoose detects nested changes
-    doc.markModified && doc.markModified('tracking');
+    doc.markModified('tracking');
 
+    console.debug('Saving order with tracking:', doc.tracking);
     await doc.save();
+    
+    // populate seller info for client view
     const updated = await order.findById(id)
-      .populate({ path: 'items.product', model: productModel.modelName, select: 'name image images imageUrl options price' })
+      .populate({ 
+        path: 'items.product', 
+        model: productModel.modelName, 
+        select: 'name image images imageUrl options price' 
+      })
+      .populate({
+        path: 'seller',
+        model: User.modelName,
+        select: 'petshopName logo name email phone address'
+      })
       .lean();
+
+    console.debug('assignCourier saved successfully:', {
+      _id: updated._id,
+      tracking: updated.tracking
+    })
 
     // emit realtime update if io available
     try {
       const io = req.app?.get('io');
-      if (io) io.to(`order:${id}`).emit('order:update', updated);
+      if (io) 
+        io.to(`order:${id}`).emit('order:update', updated);
+        console.debug('Socket.io: emitted order:update for', id);
     } catch (e) {
-      console.debug('assignCourier: socket emit failed', e?.message || e);
+      console.debug('Socket emit failed', e?.message || e);
     }
 
-    console.debug('assignCourier saved, orderId=', id, 'tracking=', updated.tracking);
     return res.json({ success: true, order: updated });
   } catch (err) {
     console.error('assignCourier error', err);
+    console.error('Stack:', err.stack)
     return res.status(500).json({ success: false, message: err.message });
   }
 };
 
 export { createOrder, getMyOrders, getMyOrdersCount, updateOrderStatus, getClientOrders, getOrderById, assignCourier };
-// ...existing code...

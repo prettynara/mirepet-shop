@@ -57,6 +57,10 @@ const TrackOrder = () => {
       }
       const ord = res?.data?.order || res?.data || null;
       if (!ord) throw new Error('Order not found');
+
+      console.log(' Fetched order:', ord);
+      console.log('Tracking info:', ord.tracking);
+
       setOrder(ord);
       setError(null);
     } catch (e) {
@@ -107,6 +111,23 @@ const TrackOrder = () => {
   };
 
   const formatTime = (t) => t ? new Date(t).toLocaleString() : '-';
+  
+  // seller 정보 추출
+  const getSellerInfo = () => {
+    if (!order) return { name: 'Seller', logo: null, phone: '', address: '' };
+    
+    const seller = order.seller || {};
+    
+    return {
+      name: seller.petshopName || seller.name || 'Seller',
+      logo: seller.logo || null,
+      phone: seller.phone || '',
+      address: seller.address || ''
+    };
+  };
+
+  const sellerInfo = order ? getSellerInfo() : null;
+
 
   return (
     <div className="p-6">
@@ -156,38 +177,90 @@ const TrackOrder = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Seller Info */}
             <div className="bg-white border rounded p-4">
-              <div className="text-sm text-gray-500">Seller</div>
-              <div className="font-medium">{(order.sellerName || (order.seller && (order.seller.name || order.seller.username))) || 'Seller'}</div>
-              <div className="text-xs text-gray-500 mt-2">{order.sellerContact || ''}</div>
-            </div>
-
-            <div className="bg-white border rounded p-4">
-              <div className="text-sm text-gray-500">Courier</div>
-              <div className="font-medium">{order.tracking?.courier || order.courier || '—'}</div>
-              <div className="text-xs text-gray-500 mt-2">{order.tracking?.service || ''}</div>
-            </div>
-
-            <div className="bg-white border rounded p-4">
-              <div className="text-sm text-gray-500">Driver</div>
-              <div className="font-medium">{order.tracking?.driver?.name || order.tracking?.driver?.id || '—'}</div>
-              <div className="text-xs text-gray-500 mt-2">ETA: {order.tracking?.eta || '—'}</div>
-            </div>
-          </div>
-
-          <div className="bg-white border rounded p-4">
-            <div className="text-sm text-gray-500 mb-3">Driver location</div>
-            {order.tracking?.location && order.tracking.location.lat && (
-              <div className="h-64 bg-gray-50 border rounded flex items-center justify-center">
-                <div className="text-sm">
-                  <div>Lat: {order.tracking.location.lat}</div>
-                  <div>Lng: {order.tracking.location.lng}</div>
-                  <div className="text-xs text-gray-500 mt-2">Map integration (Google/Mapbox) can be added here.</div>
+              <div className="text-sm text-gray-500 mb-3">Seller</div>
+              <div className="flex items-center gap-3">
+                {sellerInfo.logo ? (
+                  <img 
+                  src={sellerInfo.logo} 
+                  alt={sellerInfo.name} 
+                  className="w-16 h-16 object-cover rounded-lg border" 
+                  />
+                ) : (
+                  <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 border">
+                    🏪
+                  </div>
+                )}
+                <div className="flex-1">
+                  <div className="font-medium text-lg">{sellerInfo?.name || 'Seller'}</div>
+                  {sellerInfo?.phone && (
+                    <div className="text-xs text-gray-500 mt-1">📞 {sellerInfo.phone}</div>
+                  )}
+                  {sellerInfo?.address && (
+                    <div className="text-xs text-gray-400 mt-1">📍 {sellerInfo.address}</div>
+                  )}
                 </div>
               </div>
-            )}
-            {!order.tracking?.location && <div className="h-32 flex items-center justify-center text-gray-400">No live location available</div>}
+            </div>
+
+          {/*  Courier Info - 판매자가 저장한 배송업체 정보 표시 */}
+            <div className="bg-white border rounded p-4">
+              <div className="text-sm text-gray-500 mb-2">Courier Company</div>
+              <div className="font-medium text-lg">
+                {order.tracking?.courier || '—'}
+              </div>
+              {order.tracking?.trackingNumber && (
+                <div className="text-xs text-gray-500 mt-2">
+                  Tracking #: <span className="font-mono">{order.tracking.trackingNumber}</span>
+                </div>
+              )}
+              {order.tracking?.lastUpdated && (
+                <div className="text-xs text-gray-400 mt-1">
+                  Updated: {new Date(order.tracking.lastUpdated).toLocaleString()}
+                </div>
+              )}
+            </div>
+
+            {/* Driver Info - 판매자가 저장한 배송기사 정보 표시 */}
+            <div className="bg-white border rounded p-4">
+              <div className="text-sm text-gray-500 mb-2">Driver</div>
+              <div className="font-medium text-lg">
+                {order.tracking?.driver?.name || '—'}
+              </div>
+              {order.tracking?.driver?.phone &&(
+                <div className="text-xs text-gray-500 mt-2">
+                  📞 {order.tracking.driver.phone}
+                </div>
+              )}
+              {order.tracking?.eta && (
+                <div className="text-xs text-gray-400 mt-1">
+                ETA: {order.tracking?.eta}
+              </div>
+              )}
+            </div>
           </div>
+
+          {/* Tracking History - 배송 업데이트 기록 표시 */}
+          {order.tracking?.history && order.tracking.history.length > 0 && (
+            <div className="bg-white border rounded p-4">
+              <div className="text-sm text-gray-500 mb-3">Tracking History</div>
+              <div className="space-y-2">
+                {order.tracking.history.slice().reverse().map((h, i) => (
+                  <div key={i} className="flex items-start gap-3 text-sm border-l-2 border-blue-200 pl-3 py-1">
+                    <div className="text-xs text-gray-400 min-w-[120px]">
+                      {new Date(h.at).toLocaleString()}
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-medium">{h.status}</div>
+                      {h.note && <div className="text-gray-500 text-xs">{h.note}</div>}
+                      {h.courier && <div className="text-gray-400 text-xs">Courier: {h.courier}</div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="bg-white border rounded p-4">
             <div className="text-sm text-gray-500 mb-2">Items</div>
@@ -202,7 +275,7 @@ const TrackOrder = () => {
                       <div className="font-medium">{prod?.name || it.name || 'Product'}</div>
                       <div className="text-sm text-gray-500">Qty: {it.quantity}</div>
                     </div>
-                    <div className="font-semibold">{order.currency || '$'}{it.price || prod?.price || '-'}</div>
+                    <div className="font-semibold">{order.currency || 'TND'}{it.price || prod?.price || '-'}</div>
                   </div>
                 );
               })}
