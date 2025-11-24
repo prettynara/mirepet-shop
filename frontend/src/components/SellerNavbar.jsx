@@ -80,18 +80,25 @@ const SellerNavbar = () => {
     try {
       const res = await fetch(`${API_BASE}/api/users/logout`, { 
         method: 'POST', 
+        headers: {
+          'Content-Type': 'application/json',
+        },
         credentials: 'include' 
       });
       // ignore logout 404 (server might not implement /api/logout)
       if (!res.ok && res.status !== 404) {
         console.warn('Logout returned', res.status);
+      }else {
+        console.log('Logout successful')
       }
     } catch (e) {
       console.warn('Logout network error', e);
     } finally {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      navigate('/login');
+      localStorage.removeItem('userId');
+      localStorage.removeItem('role');
+      navigate('/login', {replace: true});
     }
   };
 

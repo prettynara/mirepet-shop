@@ -11,7 +11,7 @@ userRouter.post('/admin',adminLogin)
 //password reset
 userRouter.post('/forgot-password', forgotPassword);
 userRouter.post('/reset-password', resetPassword);
-userRouter.post('/logout', authMiddleware, logoutUser);
+userRouter.post('/logout', logoutUser);
 
 //current user
 userRouter.get('/me', authMiddleware, me);

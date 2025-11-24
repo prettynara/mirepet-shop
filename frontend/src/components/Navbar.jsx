@@ -65,11 +65,17 @@ const Navbar = () => {
     const handleLogout = async () => {
       // use absolute or leading slash so Vite dev server proxies correctly
       try {
-        await fetch(`${API_BASE}/api/users/logout`, { method: 'POST', credentials: 'include' });
+        await fetch(`${API_BASE}/api/users/logout`, { 
+          method: 'POST', 
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include' });
       } catch (err) {
         console.debug('logout  failed', err?.message || err);
       }
 
+      // 서버 응답과 관계없이 클라이언트 측 로그아웃 처리 
       const userId = localStorage.getItem('userId');
       if (userId) localStorage.removeItem(`deliveryInfo_${userId}`);
       localStorage.removeItem('token');

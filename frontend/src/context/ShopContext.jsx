@@ -167,6 +167,46 @@ export const ShopProvider = ({ children }) => {
     setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status } : o)));
   };
 
+  const getProductsData = async () => {
+  try {
+    const response = await axios.get(`${backendUrl}/api/product/list`);
+    
+    if (response.data.success) {
+      // ✅ seller 정보가 포함된 제품 데이터 저장
+      const productsWithSeller = response.data.products.map(p => {
+        // seller가 객체면 그대로, 아니면 sellerName/sellerLogo 사용
+        const sellerObj = p.seller && typeof p.seller === 'object' ? p.seller : null;
+        
+        return {
+          ...p,
+          // seller 객체 유지
+          seller: sellerObj || p.seller,
+          // fallback용 필드
+          sellerName: p.sellerName || sellerObj?.petshopName || sellerObj?.name || '',
+          sellerLogo: p.sellerLogo || sellerObj?.logo || ''
+        };
+      });
+      
+      setProducts(productsWithSeller);
+      console.log('✅ Products loaded with seller info:', productsWithSeller.length);
+      
+      // 디버깅: 첫 번째 제품의 seller 정보 출력
+      if (productsWithSeller.length > 0) {
+        console.log('Sample product seller info:', {
+          seller: productsWithSeller[0].seller,
+          sellerName: productsWithSeller[0].sellerName,
+          sellerLogo: productsWithSeller[0].sellerLogo
+        });
+      }
+    } else {
+      toast.error(response.data.message);
+    }
+  } catch (error) {
+    console.error('❌ getProductsData error:', error);
+    toast.error(error.message);
+  }
+};
+
   // hydrate cart from localStorage on mount
   useEffect(() => {
     try {
@@ -231,6 +271,7 @@ export const ShopProvider = ({ children }) => {
     setOrders,
     placeOrder,
     updateOrderStatus,
+    getProductsData
   };
 
   return <ShopContext.Provider value={value}>{children}</ShopContext.Provider>;

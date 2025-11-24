@@ -54,7 +54,17 @@ const SimilarProducts = ({category,subCategory, selectedOption}) => {
       {/* Product Grid */}
       <div className='flex flex-wrap justify-center gap-6'>
         {similar.map((item,index)=>(
-            <ProductItem key={index}  id={item._id} name={item.name} image={item.image} option={item.matchedOption} showDiscount={false} seller={item.seller} />
+            <ProductItem 
+            key={index}  
+            id={item._id} 
+            name={item.name} 
+            image={item.image} 
+            option={item.matchedOption} 
+            showDiscount={false} 
+            seller={item.seller}
+            sellerName={item.sellerName}
+            sellerLogo={item.sellerLogo}
+           />
         ))}
       </div>
     </div>

@@ -311,7 +311,9 @@ const logoutUser = (req, res) => {
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       secure: process.env.NODE_ENV === 'production'
     });
-    return res.json({ success: true, message: 'Logged out' });
+
+    console.log('Logout successful');
+    return res.json({ success: true, message: 'Logged out successfully' });
   } catch (err) {
     console.error('logoutUser error', err);
     return res.status(500).json({ success: false, message: 'Logout failed' });
