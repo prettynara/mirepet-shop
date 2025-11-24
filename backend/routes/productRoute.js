@@ -1,11 +1,13 @@
 import express from 'express'
-import {listProduct, addProduct, removeProduct, singleProduct, toggleHold, deleteProduct, updateProduct} from '../controllers/productController.js'
+import {listProduct, addProduct, removeProduct, singleProduct, toggleHold, deleteProduct, updateProduct, getMyProducts} from '../controllers/productController.js'
 import upload from '../middleware/multer.js';
 import requireAuth from "../middleware/authMiddleware.js";
 import adminAuth from '../middleware/adminAuth.js';
 import authMiddleware from '../middleware/authMiddleware.js';
 
 const productRouter = express.Router();
+
+productRouter.get('/my-products', authMiddleware, getMyProducts);
 
 console.log("📦 productRouter file loaded!");
 productRouter.post(

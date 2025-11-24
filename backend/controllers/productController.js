@@ -320,4 +320,43 @@ const updateProduct = async (req, res) => {
   }
 };
 
-export { listProduct, singleProduct, addProduct, removeProduct, toggleHold, deleteProduct, updateProduct };
+const getMyProducts = async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: 'Not authenticated' });
+    }
+
+    const sellerId = req.user.id;
+    console.debug('getMyProducts: sellerId=', sellerId);
+
+    const products = await productModel
+      .find({ seller: sellerId })
+      .populate({ 
+        path: 'seller', 
+        model: 'user',
+        select: 'petshopName logo name' })
+      .lean();
+
+    console.debug('getMyProducts: found', products.length, 'products');
+
+    if (products.length > 0) {
+      console.debug('Sample product seller:', {
+        seller: products[0].seller,
+        type: typeof products[0].seller
+      })
+    }
+
+    const enriched = products.map((p) => ({
+      ...p,
+      sellerName: p.seller?.petshopName || p.seller?.name || '',
+      sellerLogo: p.seller?.logo || '',
+    }));
+
+    return res.json({ success: true, products: enriched });
+  } catch (error) {
+    console.error('❌ getMyProducts error:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export { listProduct, singleProduct, addProduct, removeProduct, toggleHold, deleteProduct, updateProduct, getMyProducts };

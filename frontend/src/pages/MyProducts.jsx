@@ -64,17 +64,33 @@ const MyProducts = () => {
     try {
       const token = localStorage.getItem('token');
       const config = token ? { headers: { Authorization: `Bearer ${token}` }, withCredentials: true } : { withCredentials: true };
-      const res = await axios.get(`${base}/api/product/list`, config);
-      const all = Array.isArray(res.data.products) ? res.data.products : [];
-      const sid = sellerId || '';
-      const filtered = sid ? all.filter(p => String(p.seller) === String(sid)) : all;
-      setMyProducts(filtered);
-    } catch (err) {
-      console.error('fetchMyProducts error', err);
-      const sid = sellerId || '';
-      setMyProducts(sid ? products.filter(p => String(p.seller) === String(sid)) : []);
-    }
-  };
+      
+      console.log('Fetching my products form /api/product/my-products...');
+      const res = await axios.get(`${base}/api/product/my-products`, config);
+
+      console.log('My products response:', res.data);
+
+      if(res.data?.success && Array.isArray(res.data.products)) {
+        res.data.products.forEach((p, idx) => {
+          console.log(`Product ${idx}:`, {
+            _id: p._id,
+            name: p.name,
+            seller: p.seller,
+            sellerName: p.sellerName,
+            sellerLogo: p.sellerLogo
+          });
+        });
+
+        setMyProducts(res.data.products);
+      } else {
+        setMyProducts([]);
+      }
+      } catch (err) {
+        console.error('fetchMyProducts error', err);
+        const sid = sellerId || '';
+        setMyProducts(sid ? products.filter(p => String(p.seller) === String(sid)) : []);
+      }
+    };
 
   useEffect(() => {
     if (role !== 'seller') return;
@@ -259,15 +275,32 @@ const MyProducts = () => {
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-        {myProducts.map(p => (
+        {myProducts.map(p => {
+          console.log('Rendering product:' , {
+            _id: p._id,
+            name: p.name,
+            seller: p.seller,
+            sellerName: p.sellerName,
+            sellerLogo: p.sellerLogo
+        });
+
+        return (
           <div key={p._id} className="relative bg-white shadow-lg rounded-2xl overflow-hidden hover:shadow-2xl transition-shadow">
-            <ProductItem id={p._id} image={p.image} name={p.name} seller={p.seller} sellerName={p.sellerName} sellerLogo={p.sellerLogo} option={p.options?.[0]} />
+            <ProductItem 
+            id={p._id} 
+            image={p.image} 
+            name={p.name} 
+            seller={p.seller} 
+            sellerName={p.sellerName} 
+            sellerLogo={p.sellerLogo} 
+            option={p.options?.[0]} />
             <div className="absolute top-2 right-2 flex gap-2">
               <button onClick={() => handleEditClick(p)} className="bg-yellow-400 hover:bg-yellow-500 px-2 py-1 rounded text-white shadow">Edit</button>
               <button onClick={() => handleDelete(p._id)} className="bg-red-500 hover:bg-red-600 px-2 py-1 rounded text-white shadow">Delete</button>
             </div>
           </div>
-        ))}
+        );
+       })}
       </div>
     </div>
   );
