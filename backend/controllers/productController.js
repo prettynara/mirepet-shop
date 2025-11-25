@@ -7,12 +7,23 @@ import mongoose from 'mongoose';
  */
 const listProduct = async (req, res) => {
   try {
+    // role 확인
+    const role = req.user?.role || 'guest';
+    console.log('listProduct called, role:', role);
+
+    // admin이 아니면 isOnHold = false 제품만 조회
+    let filter = {};
+    if (role !== 'admin') {
+      filter.isOnHold = { $ne: true}; 
+    }
+
     let products = [];
     try {
       products = await productModel.find({}).populate({ path: 'seller', select: 'petshopName logo' }).lean();
     } catch (e) {
       products = await productModel.find({}).lean();
     }
+    console.log('listProduct: found', products.length, 'products');
 
     // seller가 object로 이미 포함되어 있지 않다면 userModel에서 매핑 조회
     const sellerIds = new Set();
@@ -50,6 +61,45 @@ const listProduct = async (req, res) => {
     console.error('listProduct error', error);
     return res.status(500).json({ success: false, message: error.message });
   }
+};
+
+const toggleHold = async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log('toggleHold called, id:', id, 'user:', req.user);
+
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: ' Not authenticated' });
+    }
+
+    if (req.user.role !== 'admin') {
+    return res.status(403).json({ success: false, message: 'Forbidden: Admin only' });
+  }
+
+  const product =await productModel.findById(id);
+  if (!product) {
+    return res.status(404).json({ success: false, message: 'Product not found' });
+  }
+
+  // Toggle isOnHold
+  product.isOnHold = !product.isOnHold;
+  await product.save();
+
+  console.log('toggleHold success:', id, 'isOnHold:', product.isOnHold);
+
+  return res.json({
+    success: true,
+    message: product.isOnHold ? 'Product on hold' : 'Product unhold',
+    product: {
+      _id: product._id,
+      name: product.name,
+      isOnHold: product.isOnHold
+    }
+  })
+} catch(error) {
+  console.error('toggleHold error', error);
+  return res.status(500).json({ success: false, message: error.message });
+ }
 };
 
 /**
@@ -197,36 +247,6 @@ const removeProduct = async (req, res) => {
     return res.json({ success: true, message: 'Product deleted', id });
   } catch (error) {
     console.error('removeProduct error', error);
-    return res.status(500).json({ success: false, message: error.message });
-  }
-};
-
-/**
- * toggleHold: 상품의 hold 상태 토글 또는 body로 지정
- */
-const toggleHold = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { hold } = req.body; // optional boolean to explicitly set
-
-    if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ success: false, message: 'Invalid id' });
-
-    const product = await productModel.findById(id);
-    if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
-
-    const requesterId = req.user?.id || req.user?._id;
-    const requesterRole = req.user?.role;
-    if (requesterRole !== 'admin' && String(product.seller) !== String(requesterId)) {
-      return res.status(403).json({ success: false, message: 'Not authorized' });
-    }
-
-    if (typeof hold === 'boolean') product.hold = hold;
-    else product.hold = !product.hold;
-
-    await product.save();
-    return res.json({ success: true, product });
-  } catch (error) {
-    console.error('toggleHold error', error);
     return res.status(500).json({ success: false, message: error.message });
   }
 };

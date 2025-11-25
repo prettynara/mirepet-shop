@@ -9,7 +9,7 @@ import { useRole } from '../context/RoleContext';
 
 const Products = () => {
 
-  const { products, search, showSearch } = useContext(ShopContext);
+  const { products, search, showSearch, fetchProducts } = useContext(ShopContext);
   const { role } = useRole();
   const userRole = role || "guest";
 
@@ -80,7 +80,10 @@ const Products = () => {
   },[category,subCategory,search, showSearch, products, userRole, sortType])
 
   //Admin Actions
-  const handleHold = async (productId) => {
+  const handleHold = async (e, productId) => {
+    e.stopPropagation();
+    e.preventDefault();
+
     try {
       const token = localStorage.getItem('token');
       const base = import.meta.env.VITE_API_URL || 'http://localhost:4000';
@@ -89,19 +92,29 @@ const Products = () => {
         ? { headers: { Authorization: `Bearer ${token}` }, withCredentials: true }
         : { withCredentials: true };
 
-      // server.js mounts productRouter on /api/products
-      await axios.patch(`http://localhost:4000/api/product/${productId}/hold`, {}, config);
+      const res = await axios.patch(`${base}/api/product/${productId}/hold`, {}, config);
 
-      // 가져온 최신 목록으로 상태 갱신 (ShopContext에 fetch 함수가 있으면 그걸 호출하는 게 더 좋음)
-      const res = await axios.get(`${base}/api/product/list`, config);
-      const newProducts = Array.isArray(res.data.products) ? res.data.products : [];
-      setFilterProducts(newProducts.filter(p => (userRole === 'admin' ? true : !p.isOnHold)));
+      if (res.data?.success) {
+        console.log('Product hold toggled:', res.data);
+
+        //제품 목록 다시 불러오기
+        if (typeof fetchProducts === 'function') {
+          await fetchProducts();
+        }
+        alert(res.data.message);
+      }
     } catch (err) {
-      console.error('hold error', err.response?.data || err.message);
+      console.error(' hold error', err.response?.data || err.message);
+      alert('Failed to toggle hold status');
     }
   }
 
-  const handleDelete = async (productId) => {
+  const handleDelete = async (e, productId) => {
+    e.stopPropagtion();
+    e.preventDefault();
+
+    if (!window.confirm('Are you sure you want to delete this product?')) return;
+
     try {
       const token = localStorage.getItem('token');
       const base = import.meta.env.VITE_API_URL || 'http://localhost:4000';
@@ -112,15 +125,16 @@ const Products = () => {
         
       await axios.delete(`http://localhost:4000/api/product/${productId}`, config);
 
-      // 삭제 후 최신 목록 다시 불러오기
-      const res = await axios.get(`${base}/api/product/list`, config);
-      const newProducts = Array.isArray(res.data.products) ? res.data.products : [];
-      setFilterProducts(newProducts.filter(p => (userRole === 'admin' ? true : !p.isOnHold)));
+      // 제품 목록 다시 불러오기
+      if (typeof fetchProducts === 'function') {
+        await fetchProducts();
+      }
+      alert('Product deleted successfully');
     } catch (err) {
       console.error('delete error', err.response?.data || err.message);
+      alert('Failed to delete product');
     }
   }
-
 
   return (
     <div className='flex flex-col sm:flex-row gap-6 sm:gap-10 pt-20 border-t'>
@@ -184,6 +198,28 @@ const Products = () => {
           {
             filterProducts.map((item)=>(
               <div key={item._id} className="relative">
+
+              {userRole === "admin" && (
+                <div className="absolute top-2 right-2 flex flex-col gap-2 z-20">
+                  <button 
+                    onClick={(e)=>handleHold(e, item._id)} 
+                    className={`px-2 py-1 text-xs rounded shadow ${
+                      item.isOnHold
+                        ? "bg-gray-500 text-white hover:bg-gray-600"
+                        : "bg-yellow-400 text-white hover:bg-yellow-500"
+                    }`}
+                  >
+                    {item.isOnHold ? "Unhold" : "Hold"}
+                  </button>
+                  <button 
+                    onClick={(e)=>handleDelete(e, item._id)} 
+                    className="bg-red-500 text-white px-2 py-1 text-xs rounded shadow hover:bg-red-600"
+                  >
+                    Delete
+                  </button>
+                </div>
+              )}
+
                 <ProductItem
                   name={item.name}
                   id={item._id}
@@ -193,17 +229,7 @@ const Products = () => {
                   sellerLogo={item.sellerLogo}
                   option={item.options?.[0]}
                 />
-                
-                {userRole === "admin" && (
-                  <div className="absolute top-2 right-2 flex flex-col gap-2">
-                    <button onClick={()=>handleHold(item._id)} className="bg-yellow-500 text-white px-2 py-1 rounded shadow hover:bg-yellow-600">
-                      {item.isOnHold ? "On Hold" : "Hold"}
-                    </button>
-                    <button onClick={()=>handleDelete(item._id)} className="bg-red-500 text-white px-2 py-1 rounded shadow hover:bg-red-600">
-                      Delete
-                    </button>
-                  </div>
-                )}
+             
               </div>
             ))}
         </div>

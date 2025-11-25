@@ -19,6 +19,7 @@ const productSchema = new mongoose.Schema({
     date: { type: Date, required:true },
     bestseller: { type: Boolean },
     options: [optionSchema], // weight/price 옵션 리스트
+    hold: { type: Boolean, default: false},
     isOnHold: {type: Boolean, default: false}
    
   },{ timestamps: true }
