@@ -36,7 +36,11 @@ const Sellers = ({ userRole }) => {
         ? { headers: { Authorization: `Bearer ${token}` }, withCredentials: true }
         : { withCredentials: true };
 
+      console.log( 'Fetching seller from /api/sellers...');
       const res = await axios.get(`${API_BASE}/api/sellers`, config);
+
+      console.log('Sellers response:', res.data);
+
       const sellers = res.data?.sellers || [];
 
       setAllSellers(sellers);
@@ -50,6 +54,8 @@ const Sellers = ({ userRole }) => {
       console.log('Fetched sellers:', sellers.length);
     } catch (err) {
       console.error("Failed to fetch sellers:", err);
+
+      console.log('Using fallback sellers(empty array)');
       setAllSellers([]);
       setFilteredSellers([]);
     }
@@ -167,7 +173,7 @@ const Sellers = ({ userRole }) => {
   const handleDelete = (e, id) => {
     e.stopPropagation();
     e.preventDefault();
-    
+
     if (window.confirm("Are you sure you want to delete this seller?")) {
       // 나중에 backend 연결시 axios.delete(`/api/sellers/${id}`) 등으로 변경
       setFilteredSellers((prev) => prev.filter((s) => s._id !== id));
@@ -187,9 +193,12 @@ const Sellers = ({ userRole }) => {
       ( s.name || s.petshopName || '' ).toLowerCase().includes(searchValue)
     );
 
-    if (sort === "name") filtered.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-    if (sort === "recent") filtered.sort((a, b) => new Date(b.createAt) - new Date(a.createAt))
-
+    if (sort === "name") {
+      filtered.sort((a, b) => (a.petshopName || a.name || '').localeCompare(b.petshopName || b.name || ''));
+    }
+      if (sort === "recent") {
+      filtered.sort((a, b) => new Date(b.createAt) - new Date(a.createAt))
+    }
     // Client/Guest는 보류 숨기기
     if (effectiveRole !== "admin") {
       filtered = filtered.filter((s) => !s.isOnHold);
@@ -227,23 +236,8 @@ const Sellers = ({ userRole }) => {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6 px-6">
         {filteredSellers.map((seller) => (
-          <Link
-            key={seller._id}
-            to={`/seller-detail/${seller._id}`}
-            className="relative block cursor-pointer bg-white border border-blue-100 shadow-md rounded-2xl hover:shadow-lg hover:-translate-y-1 transition-all duration-200 overflow-hidden"
-          >
-            {/* like / heart button - top-left */}
-            <button
-              onClick={(e) => toggleLike(e, seller._id)}
-              className="absolute top-3 left-3 z-20 flex items-center gap-2 bg-white/90 px-2 py-1 rounded-full shadow-sm text-sm"
-              aria-label={likedMap[seller._id] ? 'Unlike seller' : 'Like seller'}
-            >
-              <span className={likedMap[seller._id] ? "text-red-500" : "text-gray-400"} style={{fontSize: 16}}>
-                {likedMap[seller._id] ? '❤️' : '🤍'}
-              </span>
-              <span className="text-xs font-medium">{likesMap[seller._id] ?? 0}</span>
-            </button>            
-            {effectiveRole === "admin" && (
+          <div key={seller._id} className="relative">
+          {effectiveRole === "admin" && (
               <div className="absolute top-3 right-3 flex gap-2 z-10">
                 <button
                   onClick={(e) => toggleHold(e, seller._id)}
@@ -263,6 +257,23 @@ const Sellers = ({ userRole }) => {
                 </button>
               </div>
             )}
+
+          <Link
+            key={seller._id}
+            to={`/seller-detail/${seller._id}`}
+            className="relative block cursor-pointer bg-white border border-blue-100 shadow-md rounded-2xl hover:shadow-lg hover:-translate-y-1 transition-all duration-200 overflow-hidden"
+          >
+            {/* like / heart button - top-left */}
+            <button
+              onClick={(e) => toggleLike(e, seller._id)}
+              className="absolute top-3 left-3 z-20 flex items-center gap-2 bg-white/90 px-2 py-1 rounded-full shadow-sm text-sm"
+              aria-label={likedMap[seller._id] ? 'Unlike seller' : 'Like seller'}
+            >
+              <span className={likedMap[seller._id] ? "text-red-500" : "text-gray-400"} style={{fontSize: 16}}>
+                {likedMap[seller._id] ? '❤️' : '🤍'}
+              </span>
+              <span className="text-xs font-medium">{likesMap[seller._id] ?? 0}</span>
+            </button>            
 
             <div className="relative w-full h-40 bg-blue-50 flex justify-center items-center">
               {seller.logo ? (
@@ -289,11 +300,16 @@ const Sellers = ({ userRole }) => {
               <p className="text-xs text-gray-500 mt-2 truncate">
                 {seller.address || "No address"}
               </p>
-              <p className="text-xs text-gray-400 mt-1 line-clamp-2">
-                {seller.description}
-              </p>
-            </div>
-          </Link>
+
+                {/* Hold 상태 표시 (admin 전용) */}
+                {effectiveRole === "admin" && seller.isOnHold && (
+                  <div className="mt-2 inline-block px-2 py-1 bg-gray-200 text-gray-700 text-xs rounded-full">
+                    On Hold
+                  </div>
+                )}
+              </div>
+            </Link>
+          </div>
         ))}
       </div>
 

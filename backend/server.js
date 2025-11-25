@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import cookieParser from 'cookie-parser';
 import connectDB from './config/mongodb.js';
 import connectCloudinary from './config/cloudinary.js';
 import userRouter from './routes/userRoute.js';
@@ -65,6 +66,7 @@ app.use(cors({
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 // Static file serving
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
@@ -75,10 +77,10 @@ app.use('/api/product', productRouter);
 app.use('/api/sellers', sellerRouter);
 app.use('/api/orders', orderRouter);
 
-console.log('✅ userRouter mounted on /api/users');
-console.log('✅ productRouter mounted on /api/product');
-console.log('✅ sellerRouter mounted on /api/sellers');
-console.log('✅ orderRouter mounted on /api/orders');
+console.log(' userRouter mounted on /api/users');
+console.log(' productRouter mounted on /api/product');
+console.log(' sellerRouter mounted on /api/sellers');
+console.log(' orderRouter mounted on /api/orders');
 
 // Health check route
 app.get('/', (req, res) => {

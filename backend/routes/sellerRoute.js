@@ -9,7 +9,7 @@ const router = express.Router();
 // 역할에 따라 hold 필터링
 router.get('/', async (req, res, next) => {
     // authMiddleware를 선택적으로 적용
-    const token = req.headers.authorization?.split(' ')[1] || req.cookies.token;
+    const token = req.headers.authorization?.split(' ')[1] || req.cookies?.token;
 
     if (token) {
       try {
