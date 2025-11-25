@@ -3,11 +3,23 @@ import mongoose from 'mongoose';
 
 const getSellers = async (req, res) => {
   try {
+    // role 확인
+    const role = req.user?.role || 'guest';
+    console.log('getSellers called, role:', role);
+
+    // admin이 아니면 isOnHold가 false인 seller만 조회
+    let filter = { role: "seller" };
+    if (role !== 'admin') {
+      filter.isOnHold = { $ne: true };
+    }
+
     // only users with role 'seller'
     const sellers = await userModel
-      .find({ role: "seller" })
+      .find(filter)
       .select("-password -resetPasswordToken -resetPasswordExpire")
       .lean();
+
+    console.log('getSellers: found', sellers.length, 'sellers');
     return res.json({ success: true, sellers });
   } catch (err) {
     console.error("getSellers error:", err);
@@ -20,6 +32,13 @@ const getSeller = async (req, res) => {
     const { id } = req.params;
     const seller = await userModel.findById(id).select('-password -resetPasswordToken -resetPasswordExpire');
     if (!seller) return res.status(404).json({ success: false, message: 'Seller not found' });
+    
+    // admin 아니고 hold된 seller면 404
+    const role = req.user?.role || 'guest';
+    if (role !== 'admin' && seller.isOnHold) {
+      return res.status(404).json({ success: false, message: 'Seller not available' });
+    }
+    
     return res.json({ success: true, seller });
   } catch (err) {
     console.error('getSeller error:', err);

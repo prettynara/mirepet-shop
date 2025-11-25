@@ -45,6 +45,7 @@ const userSchema = new mongoose.Schema(
     // likes for seller profiles
     likes: { type: Number, default: 0 },
     likedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'user' }],
+    isOnHold: { type: Boolean, default: false},
     resetPasswordToken: { type: String },
     resetPasswordExpire: { type: Date },
   },

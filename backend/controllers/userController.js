@@ -388,4 +388,48 @@ const deleteClient = async (req, res) => {
   }
 };
 
-export { loginUser, registerUser, adminLogin, forgotPassword, resetPassword, me, getClient, updateClient, logoutUser, getMyDeliveryInfo, updateMyDeliveryInfo, getAllClients, deleteClient }
+const toggleSellerHold = async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log('toggleSellerHold called, id:', id, 'user:', req.user);
+
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: 'Not authenticated' });
+    }
+
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Forbidden: Admin only' });
+    }
+
+    const seller = await userModel.findById(id);
+    if (!seller) {
+      return res.status(404).json({ success: false, message: 'Seller not found' });
+    }
+
+    if (seller.role !== 'seller') {
+      return res.status(400).json({ success: false, message: 'User is not a seller' });
+    }
+
+    // Toggle isOnHold
+    seller.isOnHold = !seller.isOnHold;
+    await seller.save();
+
+    console.log('toggleSellerHold success:', id, 'isOnHold:', seller.isOnHold);
+
+    return res.json({ 
+      success: true, 
+      message: seller.isOnHold ? 'Seller on hold' : 'Seller unhold',
+      seller: {
+        _id: seller._id,
+        name: seller.name,
+        petshopName: seller.petshopName,
+        isOnHold: seller.isOnHold
+      }
+    });
+  } catch (err) {
+    console.error('toggleSellerHold error:', err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+export { loginUser, registerUser, adminLogin, forgotPassword, resetPassword, me, getClient, updateClient, logoutUser, getMyDeliveryInfo, updateMyDeliveryInfo, getAllClients, deleteClient, toggleSellerHold }

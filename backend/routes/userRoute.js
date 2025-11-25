@@ -1,5 +1,5 @@
 import express from 'express';
-import { loginUser,registerUser,adminLogin, forgotPassword, resetPassword, me, getClient, updateClient, logoutUser, getMyDeliveryInfo, updateMyDeliveryInfo, getAllClients, deleteClient } from '../controllers/userController.js';
+import { loginUser,registerUser,adminLogin, forgotPassword, resetPassword, me, getClient, updateClient, logoutUser, getMyDeliveryInfo, updateMyDeliveryInfo, getAllClients, deleteClient, toggleSellerHold } from '../controllers/userController.js';
 import authMiddleware from '../middleware/authMiddleware.js';
 
 const userRouter = express.Router();
@@ -23,6 +23,9 @@ userRouter.get('/clients', authMiddleware, getAllClients);
 userRouter.get('/client/:id', authMiddleware, getClient);
 userRouter.post('/client/:id', authMiddleware, updateClient);
 userRouter.delete('/client/:id', authMiddleware, deleteClient);
+
+// Hold seller(admin onlly)
+userRouter.patch('/seller/:id/hold', authMiddleware, toggleSellerHold);
 
 // delivery info
 userRouter.get('/me/delivery-info', authMiddleware, getMyDeliveryInfo);

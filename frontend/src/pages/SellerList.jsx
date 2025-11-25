@@ -31,14 +31,23 @@ const Sellers = ({ userRole }) => {
 
   const fetchSellers = async () => {
     try {
-      const res = await axios.get(`${API_BASE}/api/sellers`);
+      const token = localStorage.getItem('token');
+      const config = token 
+        ? { headers: { Authorization: `Bearer ${token}` }, withCredentials: true }
+        : { withCredentials: true };
+
+      const res = await axios.get(`${API_BASE}/api/sellers`, config);
       const sellers = res.data?.sellers || [];
+
       setAllSellers(sellers);
       setFilteredSellers(sellers);
+
       // initialize likes map from server data
       const lm = {};
       sellers.forEach(s => { lm[s._id] = Number(s.likes ?? s.likeCount ?? 0); });
       setLikesMap(lm);
+
+      console.log('Fetched sellers:', sellers.length);
     } catch (err) {
       console.error("Failed to fetch sellers:", err);
       setAllSellers([]);
@@ -46,9 +55,46 @@ const Sellers = ({ userRole }) => {
     }
   };
 
+  // Hold toggle api 호출
+  const toggleHold = async (e, id) => {
+    e.stopPropagation();
+    e.preventDefault();
+
+    try {
+    const token = localStorage.getItem('token');
+    const res = await axios.patch(
+      `${API_BASE}/api/users/seller/${id}/hold`,
+      {},
+      {
+        headers: { Authorization: `Bearer ${token}` },
+        withCredentials: true,
+      }
+    );
+    if (res.data?.success) {
+      console.log('Hold toggled:', res.data);
+
+      // 서버 응답으로 로컬 state 업데이트
+      setAllSellers(prev => prev.map(s =>
+        s._id === id ? { ...s, isOnHold: res.data.seller.isOnHold} : s
+      ))
+
+      filterAndSetSellers(search, sortType, prev => prev.map(s => 
+        s._id === id ? {...s, isOnHold: res.data.seller.isOnHold} : s
+      ));
+
+      alert(res.data.message);
+    }
+  } catch (err) {
+    console.error('toggleHold error:', err);
+    alert('Failed to toggle hold status');
+  }
+}
+
   // toggle like for a seller (optimistic, persisted in localStorage)
   const toggleLike = async (e, id) => {
     e.stopPropagation();
+    e.preventDefault();
+
     const token = localStorage.getItem('token');
 
     if (token) {
@@ -104,16 +150,6 @@ const Sellers = ({ userRole }) => {
     filterAndSetSellers(search, type);
   };
 
-  //Admin 보류
-  const toggleHold = (e, id) => {
-    e.stopPropagation();
-    setFilteredSellers((prev) =>
-      prev.map((s) =>
-        s._id === id ? { ...s, isOnHold: !s.isOnHold } : s
-      )
-    );        
-  }
-
   {/* const toggleLike = (id, e) => {
     e.stopPropagation(); // 카드 클릭 이벤트 방지
     setLikedSellers((prev) => ({
@@ -130,6 +166,8 @@ const Sellers = ({ userRole }) => {
 
   const handleDelete = (e, id) => {
     e.stopPropagation();
+    e.preventDefault();
+    
     if (window.confirm("Are you sure you want to delete this seller?")) {
       // 나중에 backend 연결시 axios.delete(`/api/sellers/${id}`) 등으로 변경
       setFilteredSellers((prev) => prev.filter((s) => s._id !== id));
@@ -142,14 +180,15 @@ const Sellers = ({ userRole }) => {
  };
 
  // 검색+정렬+보류 필터
-  const filterAndSetSellers = (searchValue, sort) => {
-    let filtered = initialSellers.filter((s) =>
-      s.name.toLowerCase().includes(searchValue)
+  const filterAndSetSellers = (searchValue, sort, updateFn) => {
+    const source = updateFn ? updateFn(allSellers) : allSellers;
+
+    let filtered = source.filter((s) =>
+      ( s.name || s.petshopName || '' ).toLowerCase().includes(searchValue)
     );
 
-    if (sort === "name") filtered.sort((a, b) => a.name.localeCompare(b.name));
-    if (sort === "recent")
-      filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    if (sort === "name") filtered.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    if (sort === "recent") filtered.sort((a, b) => new Date(b.createAt) - new Date(a.createAt))
 
     // Client/Guest는 보류 숨기기
     if (effectiveRole !== "admin") {
@@ -158,6 +197,10 @@ const Sellers = ({ userRole }) => {
 
     setFilteredSellers(filtered);
   };
+
+  useEffect(() => {
+    filterAndSetSellers(search, sortType);
+  }, [allSellers, effectiveRole]);
 
   return (
     <div className="pt-12 border-t min-h-screen bg-blue-50/30">
@@ -203,7 +246,6 @@ const Sellers = ({ userRole }) => {
             {effectiveRole === "admin" && (
               <div className="absolute top-3 right-3 flex gap-2 z-10">
                 <button
-
                   onClick={(e) => toggleHold(e, seller._id)}
                   className={`px-2 py-1 text-xs rounded-md shadow ${
                     seller.isOnHold
