@@ -26,8 +26,15 @@ const TrackOrder = () => {
   const [error, setError] = useState(null);
   const socketRef = useRef(null);
 
+  useEffect(() => {
+    console.log('TrackOrder - orderId:', orderId);
+    console.log('TrackOrder - paramId:', paramId);
+    console.log('TrackOrder - location.state:', location.state);
+  }, [orderId, paramId, location.state]);
+
   const fetchOrder = async () => {
     if (!orderId) {
+      console.error('TrackOrder: orderId is missing');
       setError('Invalid order id');
       setOrder(null);
       setLoading(false);
@@ -36,6 +43,8 @@ const TrackOrder = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
+      console.log('Fetching order:', orderId);
+
       let res = null;
       try {
         res = await axios.get(`${API_BASE}/api/orders/${orderId}`, {
@@ -64,6 +73,7 @@ const TrackOrder = () => {
       setOrder(ord);
       setError(null);
     } catch (e) {
+      console.error('fetchOrder error:', e);
       setError(e?.response?.data?.message || e.message || 'Failed to load order');
       setOrder(null);
     } finally {
@@ -79,14 +89,17 @@ const TrackOrder = () => {
       try {
         socketRef.current = ioClient(API_BASE, { withCredentials: true });
         socketRef.current.on('connect', () => {
+          console.log('Socket connected');
           socketRef.current.emit('joinOrder', orderId);
         });
         socketRef.current.on('order:update', (updated) => {
+          console.log('Socket: order updated', updated);
           if (String(updated?._id) === String(orderId)) {
             setOrder(updated);
           }
         });
-      } catch (e) { console.debug('socket connect failed', e?.message || e); }
+      } catch (e) { 
+        console.debug('socket connect failed', e?.message || e); }
     }
     return () => {
       clearInterval(t);
@@ -128,6 +141,31 @@ const TrackOrder = () => {
 
   const sellerInfo = order ? getSellerInfo() : null;
 
+  // 로딩/에러 상태 개선
+  if (loading) return (
+    <div className="p-6">
+      <ProductsTitle text1={'TRACK'} text2={'ORDER'} />
+      <p className="text-center mt-8">Loading order...</p>
+    </div>
+  );
+
+    if (error) return (
+    <div className="p-6">
+      <div className="flex items-center justify-between mb-6">
+        <ProductsTitle text1={'TRACK'} text2={'ORDER'} />
+        <button onClick={() => navigate(-1)} className="text-sm text-blue-600">Back</button>
+      </div>
+      <div className="text-center mt-8">
+        <p className="text-red-600 mb-4">{error}</p>
+        <button 
+          onClick={() => navigate('/orders')} 
+          className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
+        >
+          Back to Orders
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="p-6">
@@ -135,9 +173,6 @@ const TrackOrder = () => {
         <ProductsTitle text1={'TRACK'} text2={'ORDER'} />
         <button onClick={() => navigate(-1)} className="text-sm text-blue-600">Back</button>
       </div>
-
-      {loading && <p>Loading...</p>}
-      {error && <p className="text-red-600">{error}</p>}
 
       {order && (
         <div className="space-y-6">

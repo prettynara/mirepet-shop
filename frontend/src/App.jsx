@@ -29,6 +29,7 @@ import ClientDetail from './pages/ClientDetail';
 import SellerList from './pages/SellerList';
 import SellerDetail from './pages/SellerDetail';
 import TrackOrder from './pages/TrackOrder';
+import AdminOrders from './pages/AdminOrders';
 import { ToastContainer} from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import axios from 'axios';
@@ -40,10 +41,6 @@ if (token) {
 
 const App = () => {
   const { role } = useRole(); 
-  {/* const { role, setRole } = useRole(); //임의로 admin 설정
-  useEffect(() => {   //임의로 admin 설정
-    setRole("admin"); //임의로 admin 설정
-  }, []); //임의로 admin 설정 */}
 
   let navbarComponent = <Navbar />;
   if (role === 'seller') navbarComponent = <SellerNavbar />;
@@ -68,6 +65,7 @@ const App = () => {
         <Route path='/orders' element={<Orders />} />
         <Route path='/track/:orderId' element={<TrackOrder />} />
         <Route path='/admin' element={<Admin />} />
+        <Route path='/admin/orders' element={<AdminOrders />} />
         <Route path='/myorders' element={<MyOrders />} />
         <Route path='/myproducts' element={<MyProducts />} />
         <Route path='/sellers' element={<Sellers />} />

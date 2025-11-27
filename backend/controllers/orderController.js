@@ -381,4 +381,42 @@ const assignCourier = async (req, res) => {
   }
 };
 
-export { createOrder, getMyOrders, getMyOrdersCount, updateOrderStatus, getClientOrders, getOrderById, assignCourier };
+const getAllOrders = async (req, res) => {
+  try {
+    console.debug('getAllOrders req.user:', req.user);
+    if (!req.user) return res.status(401).json({ success: false, message: 'Not authenticated' });
+    
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Forbidden: Admin only' });
+    }
+
+    const orders = await order
+      .find({})
+      .sort({ createdAt: -1 })
+      .populate({ 
+        path: 'items.product', 
+        model: productModel.modelName, 
+        select: 'name image images imageUrl options price' 
+      })
+      .populate({
+        path: 'seller',
+        model: User.modelName,
+        select: 'petshopName logo name email phone address'        
+      })
+      .populate({
+        path: 'client',
+        model: User.modelName,
+        select: 'name email phone address'
+      })
+      .lean();
+
+    console.debug('getAllOrders found count=', orders.length);
+
+    return res.json({ success: true, orders });
+  } catch (err) {
+    console.error('getAllOrders error', err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+export { createOrder, getMyOrders, getMyOrdersCount, updateOrderStatus, getClientOrders, getOrderById, assignCourier, getAllOrders };
