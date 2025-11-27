@@ -1,5 +1,5 @@
 import express from 'express'
-import {listProduct, addProduct, removeProduct, singleProduct, toggleHold, deleteProduct, updateProduct, getMyProducts} from '../controllers/productController.js'
+import {listProduct, addProduct, removeProduct, singleProduct, toggleHold, deleteProduct, updateProduct, getMyProducts, getBestSellers } from '../controllers/productController.js'
 import upload from '../middleware/multer.js';
 import requireAuth from "../middleware/authMiddleware.js";
 import adminAuth from '../middleware/adminAuth.js';
@@ -21,17 +21,20 @@ productRouter.get('/list', async (req, res, next) => {
       const user = await userModle.findById(decoded.userId || decoded.id).select('-password');
       if (user) {
         req.user = { id: user._id.toString(), role: user.role, email: user.email };
-        console.log('✅ productRouter: token verified, role:', user.role);
+        console.log('productRouter: token verified, role:', user.role);
       }
     } catch (err) {
-      console.log('⚠️ productRouter: invalid token, treating as guest');
+      console.log('productRouter: invalid token, treating as guest');
     }
   } else {
-    console.log('ℹ️ productRouter: no token, treating as guest');
+    console.log('productRouter: no token, treating as guest');
   }
   
   next();
 }, listProduct);
+
+//주문 완료된 주문 기반 top 5 제품을 bestseller로 등록하기
+productRouter.get('/bestsellers', getBestSellers);
 
 // seller의 제품만 조회
 productRouter.get('/my-products', authMiddleware, getMyProducts);

@@ -380,4 +380,100 @@ const getMyProducts = async (req, res) => {
   }
 };
 
-export { listProduct, singleProduct, addProduct, removeProduct, toggleHold, deleteProduct, updateProduct, getMyProducts };
+const getBestSellers = async (req, res) => {
+  try {
+    console.log('📊 getBestSellers called');
+
+    // delivered 상태 주문에서 상품별 판매 횟수 집계
+    const result = await orderModel.aggregate([
+      // 1. delivered 주문만 필터링
+      { $match: { status: 'delivered' } },
+      
+      // 2. items 배열 펼치기
+      { $unwind: '$items' },
+      
+      // 3. product ID로 그룹화하여 총 판매 수량 계산
+      {
+        $group: {
+          _id: '$items.product',
+          totalSold: { $sum: '$items.quantity' }
+        }
+      },
+      
+      // 4. 판매량 기준 내림차순 정렬
+      { $sort: { totalSold: -1 } },
+      
+      // 5. Top 5만 선택
+      { $limit: 5 }
+    ]);
+
+    console.log('📊 Bestseller aggregation result:', result);
+
+    if (!result || result.length === 0) {
+      console.log('⚠️ No delivered orders found, returning empty array');
+      return res.json({ success: true, bestsellers: [] });
+    }
+
+    // 상품 정보 가져오기
+    const productIds = result
+      .map(r => r._id)
+      .filter(id => id && mongoose.Types.ObjectId.isValid(id));
+
+    console.log('📦 Fetching product details for IDs:', productIds);
+
+    const products = await productModel
+      .find({ _id: { $in: productIds } })
+      .populate({ path: 'seller', select: 'petshopName logo' })
+      .lean();
+
+    console.log('📦 Found products:', products.length);
+
+    // seller 정보 매핑
+    const sellerIds = new Set();
+    products.forEach(p => {
+      if (p && p.seller && typeof p.seller !== 'object') {
+        sellerIds.add(String(p.seller));
+      }
+    });
+
+    let sellerMap = {};
+    if (sellerIds.size > 0) {
+      const ids = Array.from(sellerIds).filter(id => mongoose.Types.ObjectId.isValid(id));
+      if (ids.length > 0) {
+        const sellers = await userModel.find({ _id: { $in: ids } }).select('petshopName logo').lean();
+        sellers.forEach(s => {
+          sellerMap[String(s._id)] = { petshopName: s.petshopName || '', logo: s.logo || '' };
+        });
+      }
+    }
+
+    // 판매량 순서대로 정렬된 상품 배열 생성
+    const bestsellers = result.map(r => {
+      const product = products.find(p => String(p._id) === String(r._id));
+      if (!product) return null;
+
+      const sellerObj = product.seller && typeof product.seller === 'object' ? product.seller : null;
+      const sid = !sellerObj ? String(product.seller || '') : String(sellerObj._id || '');
+      const mapped = sellerMap[sid] || null;
+
+      return {
+        ...product,
+        totalSold: r.totalSold,
+        seller: sellerObj ? (sellerObj._id ?? product.seller) : product.seller,
+        sellerName: sellerObj ? (sellerObj.petshopName || '') : (mapped?.petshopName || product.sellerName || ''),
+        sellerLogo: sellerObj ? (sellerObj.logo || '') : (mapped?.logo || ''),
+        bestseller: true // 명시적으로 bestseller 플래그 설정
+      };
+    }).filter(Boolean);
+
+    console.log('Returning', bestsellers.length, 'bestsellers');
+
+    return res.json({ success: true, bestsellers });
+  } catch (error) {
+    console.error('getBestSellers error:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+
+export { listProduct, singleProduct, addProduct, removeProduct, toggleHold, deleteProduct, updateProduct, getMyProducts, getBestSellers };
