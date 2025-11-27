@@ -419,4 +419,86 @@ const getAllOrders = async (req, res) => {
   }
 };
 
-export { createOrder, getMyOrders, getMyOrdersCount, updateOrderStatus, getClientOrders, getOrderById, assignCourier, getAllOrders };
+const getOrderStats = async (req, res) => {
+  try {
+    console.debug('getOrderStats req.user:', req.user);
+    if (!req.user) return res.status(401).json({ success: false, message: 'Not authenticated' });
+    
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Forbidden: Admin only' });
+    }
+
+    const now = new Date();
+    
+    // 이번 주 시작 (일요일)
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay());
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    // 이번 달 시작
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    // 이번 주 주문
+    const weekOrders = await order.countDocuments({
+      createdAt: { $gte: startOfWeek }
+    });
+
+    const weekRevenue = await order.aggregate([
+      { $match: { createdAt: { $gte: startOfWeek }, status: { $ne: 'cancelled' } } },
+      { $group: { _id: null, total: { $sum: '$amount' } } }
+    ]);
+
+    // 이번 달 주문
+    const monthOrders = await order.countDocuments({
+      createdAt: { $gte: startOfMonth }
+    });
+
+    const monthRevenue = await order.aggregate([
+      { $match: { createdAt: { $gte: startOfMonth }, status: { $ne: 'cancelled' } } },
+      { $group: { _id: null, total: { $sum: '$amount' } } }
+    ]);
+
+    // 전체 주문
+    const totalOrders = await order.countDocuments();
+
+    const totalRevenue = await order.aggregate([
+      { $match: { status: { $ne: 'cancelled' } } },
+      { $group: { _id: null, total: { $sum: '$amount' } } }
+    ]);
+
+    // 상태별 주문 수
+    const ordersByStatus = await order.aggregate([
+      { $group: { _id: '$status', count: { $sum: 1 } } }
+    ]);
+
+    console.debug('getOrderStats: weekOrders=', weekOrders, 'monthOrders=', monthOrders, 'totalOrders=', totalOrders);
+
+    return res.json({
+      success: true,
+      stats: {
+        week: {
+          orders: weekOrders,
+          revenue: weekRevenue[0]?.total || 0
+        },
+        month: {
+          orders: monthOrders,
+          revenue: monthRevenue[0]?.total || 0
+        },
+        total: {
+          orders: totalOrders,
+          revenue: totalRevenue[0]?.total || 0
+        },
+        byStatus: ordersByStatus.reduce((acc, curr) => {
+          acc[curr._id] = curr.count;
+          return acc;
+        }, {})
+      }
+    });
+  } catch (err) {
+    console.error('getOrderStats error', err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+
+export { createOrder, getMyOrders, getMyOrdersCount, updateOrderStatus, getClientOrders, getOrderById, assignCourier, getAllOrders, getOrderStats };

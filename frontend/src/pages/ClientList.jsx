@@ -138,15 +138,17 @@ const ClientList = ({userRole = "admin"}) => {
             onClick={() => handleClientClick(client._id)}
             className="bg-white shadow-md rounded-2xl p-5 flex flex-col transition-transform hover:scale-105 cursor-pointer"
           >
+            
             {/* Admin 삭제 버튼 */}
+            {/*
             {userRole === "admin" && (
-              <button
+                <button
                 onClick={(e) => handleDelete(e, client._id)}
                 className="absolute top-3 right-3 bg-red-500 hover:bg-red-600 text-white px-2 py-1 text-xs rounded-md shadow"
                 >
                 Delete
-                </button>
-            )}
+                </button> 
+            )} */}
 
             <div className="mb-4">
               <h2 className="text-xl font-semibold text-gray-800">{client.name}</h2>

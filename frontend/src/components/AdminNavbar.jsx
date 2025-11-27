@@ -27,7 +27,7 @@ const AdminNavbar = () => {
     <div className="fixed top-0 left-0 w-full bg-white/90 backdrop-blur-md shadow-md z-30">
       <div className="max-w-7xl mx-auto flex items-center justify-between px-6 py-4 font-medium">
         <div className="flex items-center gap-4">
-          <Link to='/admin'><img src={assets.logo} className="w-36" alt="Logo" /></Link>
+          <Link to='/sellers'><img src={assets.logo} className="w-36" alt="Logo" /></Link>
           <h1 className="inline-flex items-center gap-2 bg-[#2563EB] text-white font-medium px-3 sm:px-4 py-1 rounded-full shadow-sm text-sm sm:text-lg">
             Admin Panel
           </h1>
@@ -38,10 +38,11 @@ const AdminNavbar = () => {
           {["DASHBOARD", "SELLERS", "CLIENTS", "PRODUCTS", "ORDERS"].map((item) => {
             let path = "";
 
-            if (item === "SELLERS") path = "/seller-list";
+            if (item === "DASHBOARD") path = "/admin";
+            else if (item === "SELLERS") path = "/seller-list";
             else if (item === "CLIENTS") path = "/client-list";
             else if (item === "PRODUCTS") path = "/products";
-            else path = `/admin/${item.toLowerCase()}`;
+            else if (item === "ORDERS") path = "/admin/orders";
 
             return (
             <NavLink
@@ -80,9 +81,9 @@ const AdminNavbar = () => {
             <img className='h-5' src={assets.back_icon} alt="" />
             <p>Back</p>
           </div>
-          <NavLink onClick={() => setVisible(false)} className='py-2 pl-6 border' to='/admin/dashboard'>DASHBOARD</NavLink>
-          <NavLink onClick={() => setVisible(false)} className='py-2 pl-6 border' to='/sellers'>SELLERS</NavLink>
-          <NavLink onClick={() => setVisible(false)} className='py-2 pl-6 border' to='/clients'>CLIENTS</NavLink>
+          <NavLink onClick={() => setVisible(false)} className='py-2 pl-6 border' to='/admin'>DASHBOARD</NavLink>
+          <NavLink onClick={() => setVisible(false)} className='py-2 pl-6 border' to='/seller-list'>SELLERS</NavLink>
+          <NavLink onClick={() => setVisible(false)} className='py-2 pl-6 border' to='/client-list'>CLIENTS</NavLink>
           <NavLink onClick={() => setVisible(false)} className='py-2 pl-6 border' to='/products'>PRODUCTS</NavLink>
           <NavLink onClick={() => setVisible(false)} className='py-2 pl-6 border' to='/admin/orders'>ORDERS</NavLink>
         </div>

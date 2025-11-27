@@ -211,12 +211,13 @@ const Products = () => {
                   >
                     {item.isOnHold ? "Unhold" : "Hold"}
                   </button>
+                  {/*
                   <button 
                     onClick={(e)=>handleDelete(e, item._id)} 
                     className="bg-red-500 text-white px-2 py-1 text-xs rounded shadow hover:bg-red-600"
                   >
                     Delete
-                  </button>
+                  </button> */}
                 </div>
               )}
 

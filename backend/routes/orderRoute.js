@@ -1,5 +1,5 @@
 import express from 'express';
-import { createOrder, getMyOrders, getMyOrdersCount, updateOrderStatus, getClientOrders, getOrderById, assignCourier, getAllOrders } from '../controllers/orderController.js';
+import { createOrder, getMyOrders, getMyOrdersCount, updateOrderStatus, getClientOrders, getOrderById, assignCourier, getAllOrders, getOrderStats } from '../controllers/orderController.js';
 import authMiddleware from '../middleware/authMiddleware.js';
 import adminAuth from '../middleware/adminAuth.js';
 
@@ -13,6 +13,9 @@ router.use((req, res, next) => {
 router.post('/', authMiddleware, createOrder); // allow guest orders as well
 router.get('/mine', authMiddleware, getMyOrders);
 router.get('/mine/count', authMiddleware, getMyOrdersCount);
+
+// 통계 조회
+router.get('/stats', adminAuth, getOrderStats);
 
 //Admin 전용: 모든 주문 조회
 router.get('/all', adminAuth, getAllOrders);

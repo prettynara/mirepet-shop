@@ -119,7 +119,7 @@ const Login = () => {
       if (userRole === 'seller') {
         navigate('/seller/dashboard', { replace: true });
       } else if (userRole === 'admin') {
-        navigate('/admin/dashboard', { replace: true });
+        navigate('/admin', { replace: true });
       } else {
         navigate('/', { replace: true });
       }

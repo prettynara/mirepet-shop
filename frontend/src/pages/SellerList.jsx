@@ -249,12 +249,13 @@ const Sellers = ({ userRole }) => {
                 >
                   {seller.isOnHold ? "On Hold" : "Hold"}
                 </button>
+                {/*
                 <button
                   onClick={(e) => handleDelete(e, seller._id)}
                   className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 text-xs rounded-md shadow"
                 >
                   Delete
-                </button>
+                </button> */}
               </div>
             )}
 
