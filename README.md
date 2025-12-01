@@ -39,7 +39,7 @@ The goal is to provide a **centralized platform for pet products**, helping both
 - 🔄 Phase 2: Frontend Setup with React + Vite  
 - ⬜ Phase 3: Backend API Implementation  
 - ⬜ Phase 4: Database Integration (MongoDB)  
-- ⬜ Phase 5: Deployment & Testing  
+- ⬜ Phase 5: Testing  
 
 ---
 
